@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/siderolabs/gen/xslices"
 
@@ -49,9 +48,9 @@ func (p *Provisioner) CreateLoadBalancer(state *State, clusterReq provision.Clus
 	cmd := exec.Command(clusterReq.SelfExecutable, args...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true, // daemonize
-	}
+	// cmd.SysProcAttr = &syscall.SysProcAttr{
+	// 	Setsid: true, // daemonize
+	// }
 
 	if err = cmd.Start(); err != nil {
 		return err

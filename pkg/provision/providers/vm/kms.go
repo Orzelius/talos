@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"syscall"
 
 	"github.com/siderolabs/talos/pkg/provision"
 )
@@ -47,9 +46,9 @@ func (p *Provisioner) CreateKMS(state *State, clusterReq provision.ClusterReques
 	cmd := exec.Command(clusterReq.SelfExecutable, args...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true, // daemonize
-	}
+	// cmd.SysProcAttr = &syscall.SysProcAttr{
+	// 	Setsid: true, // daemonize
+	// }
 
 	if err = cmd.Start(); err != nil {
 		return err

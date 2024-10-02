@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
@@ -299,9 +298,9 @@ func (p *Provisioner) CreateDHCPd(state *State, clusterReq provision.ClusterRequ
 	cmd := exec.Command(clusterReq.SelfExecutable, args...)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true, // daemonize
-	}
+	// cmd.SysProcAttr = &syscall.SysProcAttr{
+	// 	Setsid: true, // daemonize
+	// }
 
 	if err = cmd.Start(); err != nil {
 		return err
