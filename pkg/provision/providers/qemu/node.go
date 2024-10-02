@@ -15,7 +15,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
@@ -223,9 +222,9 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 	cmd.Stdin = launchConfigFile
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true, // daemonize
-	}
+	// cmd.SysProcAttr = &syscall.SysProcAttr{
+	// 	Setsid: true, // daemonize
+	// }
 
 	if err = cmd.Start(); err != nil {
 		return provision.NodeInfo{}, err
