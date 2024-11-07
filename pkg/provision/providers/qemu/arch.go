@@ -83,6 +83,7 @@ func (arch Arch) PFlash(uefiEnabled bool, extraUEFISearchPaths []string) []PFlas
 			"/usr/share/OVMF",
 			"/usr/share/edk2/aarch64",      // Fedora
 			"/usr/share/edk2/experimental", // Fedora
+			"/opt/homebrew/share/qemu",     // darwin
 		}
 
 		// Secure boot enabled firmware files
@@ -96,12 +97,14 @@ func (arch Arch) PFlash(uefiEnabled bool, extraUEFISearchPaths []string) []PFlas
 			"AAVMF_CODE.fd",
 			"QEMU_EFI.fd",
 			"OVMF.stateless.fd",
+			"edk2-aarch64-code.fd",
 		}
 
 		// Empty vars files
 		uefiVarsFiles := []string{
 			"AAVMF_VARS.fd",
 			"QEMU_VARS.fd",
+			"edk2-arm-vars.fd",
 		}
 
 		// Append extra search paths

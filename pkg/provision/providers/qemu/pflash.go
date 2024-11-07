@@ -15,6 +15,7 @@ import (
 //nolint:gocyclo
 func (p *provisioner) createPFlashImages(state *vm.State, nodeName string, pflashSpec []PFlash) ([]string, error) {
 	var images []string
+	fmt.Println("createPFlashImages()")
 
 	for i, pflash := range pflashSpec {
 		if err := func(i int, pflash PFlash) error {
@@ -46,6 +47,7 @@ func (p *provisioner) createPFlashImages(state *vm.State, nodeName string, pflas
 
 					defer src.Close() //nolint:errcheck
 
+					fmt.Printf("copying %s into %s\n", sourcePath, path)
 					if _, err = io.Copy(f, src); err != nil {
 						return err
 					}

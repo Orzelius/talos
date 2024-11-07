@@ -29,6 +29,7 @@ import (
 
 //nolint:gocyclo,cyclop
 func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRequest, nodeReq provision.NodeRequest, opts *provision.Options) (provision.NodeInfo, error) {
+	fmt.Println("createNode()")
 	arch := Arch(opts.TargetArch)
 	pidPath := state.GetRelativePath(fmt.Sprintf("%s.pid", nodeReq.Name))
 
@@ -49,6 +50,8 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 
 	memSize := nodeReq.Memory / 1024 / 1024
 
+	fmt.Printf("disks: %v", nodeReq.Disks)
+
 	diskPaths, err := p.CreateDisks(state, nodeReq)
 	if err != nil {
 		return provision.NodeInfo{}, err
@@ -58,6 +61,8 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 	if err != nil {
 		return provision.NodeInfo{}, err
 	}
+
+	fmt.Printf("log file: %s\n", state.GetRelativePath(fmt.Sprintf("%s.log", nodeReq.Name)))
 
 	logFile, err := os.OpenFile(state.GetRelativePath(fmt.Sprintf("%s.log", nodeReq.Name)), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o666)
 	if err != nil {
@@ -226,6 +231,7 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 	// 	Setsid: true, // daemonize
 	// }
 
+	fmt.Println("running qemu-launch")
 	if err = cmd.Start(); err != nil {
 		return provision.NodeInfo{}, err
 	}
@@ -283,13 +289,14 @@ func (p *provisioner) findBridgeListenPort(clusterReq provision.ClusterRequest) 
 }
 
 func (p *provisioner) populateSystemDisk(disks []string, clusterReq provision.ClusterRequest) error {
+	fmt.Printf("populateSystemDisk len(disks): %d, clusterReq.DiskImagePath: %s", len(disks), clusterReq.DiskImagePath)
 	if len(disks) > 0 && clusterReq.DiskImagePath != "" {
 		disk, err := os.OpenFile(disks[0], os.O_RDWR, 0o755)
 		if err != nil {
 			return err
 		}
 		defer disk.Close() //nolint:errcheck
-
+		fmt.Printf("clusterReq.DiskImagePath: %s/n", clusterReq.DiskImagePath)
 		image, err := os.Open(clusterReq.DiskImagePath)
 		if err != nil {
 			return err

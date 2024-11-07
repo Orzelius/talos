@@ -24,6 +24,7 @@ func (p *Provisioner) UserDiskName(index int) string {
 
 // CreateDisks creates empty disk files for each disk.
 func (p *Provisioner) CreateDisks(state *State, nodeReq provision.NodeRequest) (diskPaths []string, err error) {
+	// todo: use qemu-img
 	diskPaths = make([]string, len(nodeReq.Disks))
 
 	for i, disk := range nodeReq.Disks {
