@@ -9,11 +9,9 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -31,7 +29,7 @@ import (
 )
 
 //nolint:gocyclo,cyclop
-func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRequest, nodeReq provision.NodeRequest, opts *provision.Options) (provision.NodeInfo, error) {
+func (p *QemuProvisioner) createNode(state *vm.State, clusterReq vm.ClusterRequest, nodeReq vm.NodeRequest, opts *provision.Options) (provision.NodeInfo, error) {
 	arch := Arch(opts.TargetArch)
 	pidPath := state.GetRelativePath(fmt.Sprintf("%s.pid", nodeReq.Name))
 
@@ -113,9 +111,9 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		}
 
 		switch nodeReq.ConfigInjectionMethod {
-		case provision.ConfigInjectionMethodHTTP:
+		case vm.ConfigInjectionMethodHTTP:
 			cmdline.Append("talos.config", "{TALOS_CONFIG_URL}") // to be patched by launcher
-		case provision.ConfigInjectionMethodMetalISO:
+		case vm.ConfigInjectionMethodMetalISO:
 			cmdline.Append("talos.config", "metal-iso")
 
 			extraISOPath, err = p.createMetalConfigISO(state, nodeReq.Name, nodeConfig)
@@ -130,7 +128,7 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		nodeUUID = *nodeReq.UUID
 	}
 
-	apiPort, err := p.findBridgeListenPort(clusterReq)
+	apiBindAddress, err := p.findAPIBind(clusterReq)
 	if err != nil {
 		return provision.NodeInfo{}, fmt.Errorf("error finding listen address for the API: %w", err)
 	}
@@ -156,7 +154,7 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 	launchConfig := LaunchConfig{
 		ArchitectureData: arch,
 		DiskPaths:        diskPaths,
-		DiskDrivers: xslices.Map(nodeReq.Disks, func(disk *provision.Disk) string {
+		DiskDrivers: xslices.Map(nodeReq.Disks, func(disk *vm.Disk) string {
 			return disk.Driver
 		}),
 		VCPUCount:         vcpuCount,
@@ -165,7 +163,6 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		ExtraISOPath:      extraISOPath,
 		PFlashImages:      pflashImages,
 		MonitorPath:       state.GetRelativePath(fmt.Sprintf("%s.monitor", nodeReq.Name)),
-		EnableKVM:         opts.TargetArch == runtime.GOARCH,
 		BadRTC:            nodeReq.BadRTC,
 		DefaultBootOrder:  defaultBootOrder,
 		BootloaderEnabled: opts.BootloaderEnabled,
@@ -173,17 +170,14 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		Config:            nodeConfig,
 		BridgeName:        state.BridgeName,
 		NetworkConfig:     state.VMCNIConfig,
-		CNI:               clusterReq.Network.CNI,
 		CIDRs:             clusterReq.Network.CIDRs,
-		NoMasqueradeCIDRs: clusterReq.Network.NoMasqueradeCIDRs,
-		IPs:               nodeReq.IPs,
-		GatewayAddrs:      clusterReq.Network.GatewayAddrs,
-		MTU:               clusterReq.Network.MTU,
-		Nameservers:       clusterReq.Network.Nameservers,
-		TFTPServer:        nodeReq.TFTPServer,
-		IPXEBootFileName:  nodeReq.IPXEBootFilename,
-		APIPort:           apiPort,
-		WithDebugShell:    opts.WithDebugShell,
+		// TODO
+		// IPs:               nodeReq.IPs,
+		GatewayAddrs:     clusterReq.Network.GatewayAddrs,
+		TFTPServer:       nodeReq.TFTPServer,
+		IPXEBootFileName: nodeReq.IPXEBootFilename,
+		APIBindAddress:   apiBindAddress,
+		WithDebugShell:   opts.WithDebugShell,
 	}
 
 	if clusterReq.IPXEBootScript != "" {
@@ -201,9 +195,10 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		Memory:   nodeReq.Memory,
 		DiskSize: nodeReq.Disks[0].Size,
 
-		IPs: nodeReq.IPs,
+		// TODO
+		// IPs: nodeReq.IPs,
 
-		APIPort: apiPort,
+		APIAddress: apiBindAddress,
 	}
 
 	if opts.TPM2Enabled {
@@ -216,8 +211,11 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		nodeInfo.TPM2StateDir = tpm2.StateDir
 	}
 
-	if !clusterReq.Network.DHCPSkipHostname {
-		launchConfig.Hostname = nodeReq.Name
+	launchConfig.Hostname = nodeReq.Name
+
+	launchConfig, err = addPlatformOpts(clusterReq, launchConfig, nodeReq, *opts)
+	if err != nil {
+		return provision.NodeInfo{}, err
 	}
 
 	if !(nodeReq.PXEBooted || launchConfig.IPXEBootFileName != "") {
@@ -267,12 +265,12 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 	return nodeInfo, nil
 }
 
-func (p *provisioner) createNodes(state *vm.State, clusterReq provision.ClusterRequest, nodeReqs []provision.NodeRequest, opts *provision.Options) ([]provision.NodeInfo, error) {
+func (p *QemuProvisioner) createNodes(state *vm.State, clusterReq vm.ClusterRequest, nodeReqs []vm.NodeRequest, opts *provision.Options) ([]provision.NodeInfo, error) {
 	errCh := make(chan error)
 	nodeCh := make(chan provision.NodeInfo, len(nodeReqs))
 
 	for _, nodeReq := range nodeReqs {
-		go func(nodeReq provision.NodeRequest) {
+		go func(nodeReq vm.NodeRequest) {
 			nodeInfo, err := p.createNode(state, clusterReq, nodeReq, opts)
 			if err == nil {
 				nodeCh <- nodeInfo
@@ -299,18 +297,7 @@ func (p *provisioner) createNodes(state *vm.State, clusterReq provision.ClusterR
 	return nodesInfo, multiErr.ErrorOrNil()
 }
 
-func (p *provisioner) findBridgeListenPort(clusterReq provision.ClusterRequest) (int, error) {
-	l, err := net.Listen("tcp", net.JoinHostPort(clusterReq.Network.GatewayAddrs[0].String(), "0"))
-	if err != nil {
-		return 0, err
-	}
-
-	port := l.Addr().(*net.TCPAddr).Port
-
-	return port, l.Close()
-}
-
-func (p *provisioner) populateSystemDisk(disks []string, clusterReq provision.ClusterRequest) error {
+func (p *QemuProvisioner) populateSystemDisk(disks []string, clusterReq vm.ClusterRequest) error {
 	if len(disks) > 0 && clusterReq.DiskImagePath != "" {
 		disk, err := os.OpenFile(disks[0], os.O_RDWR, 0o755)
 		if err != nil {
@@ -332,7 +319,7 @@ func (p *provisioner) populateSystemDisk(disks []string, clusterReq provision.Cl
 	return nil
 }
 
-func (p *provisioner) createMetalConfigISO(state *vm.State, nodeName, config string) (string, error) {
+func (p *QemuProvisioner) createMetalConfigISO(state *vm.State, nodeName, config string) (string, error) {
 	isoPath := state.GetRelativePath(nodeName + "-metal-config.iso")
 
 	tmpDir, err := os.MkdirTemp("", "talos-metal-config-iso")

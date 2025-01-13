@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/provision"
 	"github.com/siderolabs/talos/pkg/provision/providers/vm"
@@ -17,7 +18,7 @@ import (
 // Create Talos cluster as a set of qemu VMs.
 //
 //nolint:gocyclo,cyclop
-func (p *provisioner) Create(ctx context.Context, request provision.ClusterRequest, opts ...provision.Option) (provision.Cluster, error) {
+func (p *QemuProvisioner) Create(ctx context.Context, request vm.ClusterRequest, opts ...provision.Option) (provision.Cluster, error) {
 	options := provision.DefaultOptions()
 
 	for _, opt := range opts {
@@ -51,7 +52,7 @@ func (p *provisioner) Create(ctx context.Context, request provision.ClusterReque
 	if options.SiderolinkEnabled {
 		fmt.Fprintln(options.LogWriter, "creating siderolink agent")
 
-		if err = p.CreateSiderolinkAgent(state, request); err != nil {
+		if err = p.CreateSiderolinkAgent(state, vm.ClusterRequest(request)); err != nil {
 			return nil, err
 		}
 
@@ -66,7 +67,11 @@ func (p *provisioner) Create(ctx context.Context, request provision.ClusterReque
 
 	fmt.Fprintln(options.LogWriter, "creating load balancer")
 
-	if err = p.CreateLoadBalancer(state, request); err != nil {
+	// TODO: Find a way to reuse provision.BaseNodeRequest filter methods
+	controlplanes := xslices.Filter(request.Nodes, func(n vm.NodeRequest) bool { return n.Type.IsControlPlane() })
+	controlplaneIps := xslices.Map(controlplanes, func(n vm.NodeRequest) string { return "TODO: Pass IP" })
+
+	if err = p.CreateLoadBalancer(state, request, controlplaneIps); err != nil {
 		return nil, fmt.Errorf("error creating loadbalancer: %w", err)
 	}
 
@@ -96,7 +101,7 @@ func (p *provisioner) Create(ctx context.Context, request provision.ClusterReque
 
 	fmt.Fprintln(options.LogWriter, "creating controlplane nodes")
 
-	if nodeInfo, err = p.createNodes(state, request, request.Nodes.ControlPlaneNodes(), &options); err != nil {
+	if nodeInfo, err = p.createNodes(state, request, controlplanes, &options); err != nil {
 		return nil, err
 	}
 
@@ -104,7 +109,8 @@ func (p *provisioner) Create(ctx context.Context, request provision.ClusterReque
 
 	var workerNodeInfo []provision.NodeInfo
 
-	if workerNodeInfo, err = p.createNodes(state, request, request.Nodes.WorkerNodes(), &options); err != nil {
+	workers := xslices.Filter(request.Nodes, func(n vm.NodeRequest) bool { return !n.Type.IsControlPlane() })
+	if workerNodeInfo, err = p.createNodes(state, request, workers, &options); err != nil {
 		return nil, err
 	}
 
@@ -127,19 +133,18 @@ func (p *provisioner) Create(ctx context.Context, request provision.ClusterReque
 		lbPort = request.Network.LoadBalancerPorts[0]
 	}
 
-	state.ClusterInfo = provision.ClusterInfo{
+	state.ClusterInfo = getPlatformClusterInfo(request, provision.ClusterInfo{
 		ClusterName: request.Name,
 		Network: provision.NetworkInfo{
-			Name:              request.Network.Name,
-			CIDRs:             request.Network.CIDRs,
-			NoMasqueradeCIDRs: request.Network.NoMasqueradeCIDRs,
-			GatewayAddrs:      request.Network.GatewayAddrs,
-			MTU:               request.Network.MTU,
+			Name:         request.Network.Name,
+			CIDRs:        request.Network.CIDRs,
+			GatewayAddrs: request.Network.GatewayAddrs,
+			MTU:          request.Network.MTU,
 		},
 		Nodes:              nodeInfo,
 		ExtraNodes:         pxeNodeInfo,
-		KubernetesEndpoint: p.GetExternalKubernetesControlPlaneEndpoint(request.Network, lbPort),
-	}
+		KubernetesEndpoint: p.GetExternalKubernetesControlPlaneEndpoint(request.Network.NetworkRequestBase.NetworkRequestBase, lbPort),
+	})
 
 	err = state.Save()
 	if err != nil {

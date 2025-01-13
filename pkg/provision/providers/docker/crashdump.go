@@ -19,7 +19,7 @@ import (
 )
 
 // CrashDump produces debug information to help with debugging failures.
-func (p *provisioner) CrashDump(ctx context.Context, cluster provision.Cluster, logWriter io.Writer) {
+func (p *DockerProvisioner) CrashDump(ctx context.Context, cluster provision.Cluster, logWriter io.Writer) {
 	containers, err := p.listNodes(ctx, cluster.Info().ClusterName)
 	if err != nil {
 		fmt.Fprintf(logWriter, "error listing containers: %s\n", err)

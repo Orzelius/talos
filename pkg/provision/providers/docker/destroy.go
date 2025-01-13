@@ -16,7 +16,7 @@ import (
 // Destroy Talos cluster as set of Docker nodes.
 //
 // Only cluster.Info().ClusterName and cluster.Info().Network.Name is being used.
-func (p *provisioner) Destroy(ctx context.Context, cluster provision.Cluster, opts ...provision.Option) error {
+func (p *DockerProvisioner) Destroy(ctx context.Context, cluster provision.Cluster, opts ...provision.Option) error {
 	options := provision.DefaultOptions()
 
 	for _, opt := range opts {

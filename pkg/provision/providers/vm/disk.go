@@ -8,9 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"syscall"
 
-	"github.com/siderolabs/talos/pkg/provision"
+	"github.com/detailyang/go-fallocate"
 )
 
 // UserDiskName returns disk device path.
@@ -23,7 +22,7 @@ func (p *Provisioner) UserDiskName(index int) string {
 }
 
 // CreateDisks creates empty disk files for each disk.
-func (p *Provisioner) CreateDisks(state *State, nodeReq provision.NodeRequest) (diskPaths []string, err error) {
+func (p *Provisioner) CreateDisks(state *State, nodeReq NodeRequest) (diskPaths []string, err error) {
 	diskPaths = make([]string, len(nodeReq.Disks))
 
 	for i, disk := range nodeReq.Disks {
@@ -43,7 +42,7 @@ func (p *Provisioner) CreateDisks(state *State, nodeReq provision.NodeRequest) (
 		}
 
 		if !disk.SkipPreallocate {
-			if err = syscall.Fallocate(int(diskF.Fd()), 0, 0, int64(disk.Size)); err != nil {
+			if err = fallocate.Fallocate(diskF, 0, int64(disk.Size)); err != nil {
 				fmt.Fprintf(os.Stderr, "WARNING: failed to preallocate disk space for %q (size %d): %s", diskPath, disk.Size, err)
 			}
 		}

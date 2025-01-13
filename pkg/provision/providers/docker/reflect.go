@@ -17,7 +17,7 @@ import (
 )
 
 //nolint:gocyclo
-func (p *provisioner) Reflect(ctx context.Context, clusterName, stateDirectory string) (provision.Cluster, error) {
+func (p *DockerProvisioner) Reflect(ctx context.Context, clusterName, stateDirectory string) (provision.Cluster, error) {
 	res := &result{
 		clusterInfo: provision.ClusterInfo{
 			ClusterName: clusterName,

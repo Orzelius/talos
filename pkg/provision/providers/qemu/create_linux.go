@@ -2,17 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//go:build !linux && !darwin
-
-package providers
+package qemu
 
 import (
-	"context"
-	"errors"
-
 	"github.com/siderolabs/talos/pkg/provision"
+	"github.com/siderolabs/talos/pkg/provision/providers/vm"
 )
 
-func newQemu(ctx context.Context) (provision.Provisioner, error) {
-	return nil, errors.New("qemu provisioner is not supported on this platform")
+func getPlatformClusterInfo(request vm.ClusterRequest, base provision.ClusterInfo) provision.ClusterInfo {
+	base.Network.NoMasqueradeCIDRs = request.Network.NoMasqueradeCIDRs
+	return base
 }
