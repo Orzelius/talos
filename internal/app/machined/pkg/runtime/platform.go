@@ -11,7 +11,6 @@ import (
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/siderolabs/go-procfs/procfs"
 
-	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/resources/network"
 	"github.com/siderolabs/talos/pkg/machinery/resources/runtime"
 )
@@ -31,7 +30,7 @@ type Platform interface {
 	Configuration(context.Context, state.State) ([]byte, error)
 
 	// KernelArgs returns additional kernel arguments which should be injected for the kernel boot.
-	KernelArgs(arch string, quirks quirks.Quirks) procfs.Parameters
+	KernelArgs(arch string) procfs.Parameters
 
 	// NetworkConfiguration fetches network configuration from the platform metadata.
 	//

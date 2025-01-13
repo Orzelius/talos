@@ -88,15 +88,6 @@ func WithDebugShell(enabled bool) Option {
 	}
 }
 
-// WithIOMMU enables or disables IOMMU.
-func WithIOMMU(enabled bool) Option {
-	return func(o *Options) error {
-		o.IOMMUEnabled = enabled
-
-		return nil
-	}
-}
-
 // WithExtraUEFISearchPaths configures additional search paths to look for UEFI firmware.
 func WithExtraUEFISearchPaths(extraUEFISearchPaths []string) Option {
 	return func(o *Options) error {
@@ -151,15 +142,6 @@ func WithSaveSupportArchivePath(path string) Option {
 	}
 }
 
-// WithSaveClusterLogsArchivePath specifies path to save cluster logs archive on destroy.
-func WithSaveClusterLogsArchivePath(path string) Option {
-	return func(o *Options) error {
-		o.SaveClusterLogsArchivePath = path
-
-		return nil
-	}
-}
-
 // WithKMS inits KMS server in the provisioner.
 func WithKMS(endpoint string) Option {
 	return func(o *Options) error {
@@ -204,17 +186,14 @@ type Options struct {
 	TPM2Enabled bool
 	// Enable debug shell in the bootloader.
 	WithDebugShell bool
-	// Enable IOMMU for VMs and add a new PCI root controller and network interface.
-	IOMMUEnabled bool
 	// Configure additional search paths to look for UEFI firmware.
 	ExtraUEFISearchPaths []string
 
 	// Expose ports to worker machines in docker provisioner
-	DockerPorts                []string
-	DockerPortsHostIP          string
-	SaveSupportArchivePath     string
-	SaveClusterLogsArchivePath string
-	DeleteStateOnErr           bool
+	DockerPorts            []string
+	DockerPortsHostIP      string
+	SaveSupportArchivePath string
+	DeleteStateOnErr       bool
 
 	KMSEndpoint      string
 	JSONLogsEndpoint string

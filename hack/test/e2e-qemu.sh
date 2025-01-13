@@ -9,7 +9,6 @@ source ./hack/test/e2e.sh
 
 PROVISIONER=qemu
 CLUSTER_NAME="e2e-${PROVISIONER}"
-LOG_ARCHIVE_SUFFIX="${GITHUB_STEP_NAME:-e2e-${PROVISIONER}}"
 
 QEMU_FLAGS=()
 
@@ -131,14 +130,6 @@ case "${WITH_CONFIG_PATCH:-false}" in
     ;;
 esac
 
-case "${WITH_ISO:-false}" in
-  false)
-    ;;
-  *)
-    QEMU_FLAGS+=("--iso-path=${ARTIFACTS}/metal-amd64.iso")
-    ;;
-esac
-
 case "${WITH_CONFIG_PATCH_WORKER:-false}" in
   false)
     ;;
@@ -192,7 +183,6 @@ case "${WITH_APPARMOR_LSM_ENABLED:-false}" in
 machine:
   install:
     extraKernelArgs:
-      - -selinux
       - lsm=lockdown,capability,yama,apparmor,bpf
       - apparmor=1
 EOF
@@ -210,14 +200,6 @@ case "${WITH_CONFIG_INJECTION_METHOD:-default}" in
     ;;
 esac
 
-case "${WITH_IOMMU:-false}" in
-  false)
-    ;;
-  *)
-    QEMU_FLAGS+=("--with-iommu")
-    ;;
-esac
-
 function create_cluster {
   build_registry_mirrors
 
@@ -226,13 +208,13 @@ function create_cluster {
     --name="${CLUSTER_NAME}" \
     --kubernetes-version="${KUBERNETES_VERSION}" \
     --controlplanes=3 \
-    --workers="${QEMU_WORKERS:-2}" \
-    --disk="${QEMU_SYSTEM_DISK_SIZE:-15360}" \
+    --workers="${QEMU_WORKERS:-1}" \
+    --disk=15360 \
     --extra-disks="${QEMU_EXTRA_DISKS:-0}" \
     --extra-disks-size="${QEMU_EXTRA_DISKS_SIZE:-5120}" \
     --extra-disks-drivers="${QEMU_EXTRA_DISKS_DRIVERS:-}" \
     --mtu=1430 \
-    --memory="${QEMU_MEMORY_CONTROLPLANES:-2048}" \
+    --memory=2048 \
     --memory-workers="${QEMU_MEMORY_WORKERS:-2048}" \
     --cpus="${QEMU_CPUS:-2}" \
     --cpus-workers="${QEMU_CPUS_WORKERS:-2}" \
@@ -242,6 +224,7 @@ function create_cluster {
     --install-image="${INSTALLER_IMAGE}" \
     --with-init-node=false \
     --cni-bundle-url="${ARTIFACTS}/talosctl-cni-bundle-\${ARCH}.tar.gz" \
+    --crashdump \
     "${REGISTRY_MIRROR_FLAGS[@]}" \
     "${QEMU_FLAGS[@]}"
 
@@ -249,11 +232,7 @@ function create_cluster {
 }
 
 function destroy_cluster() {
-  "${TALOSCTL}" cluster destroy \
-    --name "${CLUSTER_NAME}" \
-    --provisioner "${PROVISIONER}" \
-    --save-cluster-logs-archive-path="/tmp/logs-${LOG_ARCHIVE_SUFFIX}.tar.gz" \
-    --save-support-archive-path="/tmp/support-${LOG_ARCHIVE_SUFFIX}.zip"
+  "${TALOSCTL}" cluster destroy --name "${CLUSTER_NAME}" --provisioner "${PROVISIONER}" --save-support-archive-path=/tmp/support-${CLUSTER_NAME}.zip
 }
 
 trap destroy_cluster SIGINT EXIT

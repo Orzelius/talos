@@ -1,54 +1,49 @@
-# syntax = docker/dockerfile-upstream:1.12.1-labs
+# syntax = docker/dockerfile-upstream:1.11.1-labs
 
 # Meta args applied to stage base names.
 
-ARG TOOLS=scratch
-ARG PKGS=scratch
-ARG EXTRAS=scratch
-ARG INSTALLER_ARCH=scratch
-ARG DEBUG_TOOLS_SOURCE=scratch
+ARG TOOLS
+ARG PKGS
+ARG EXTRAS
+ARG INSTALLER_ARCH
+ARG DEBUG_TOOLS_SOURCE
 
-ARG PKGS_PREFIX=scratch
-ARG PKG_FHS=scratch
-ARG PKG_CA_CERTIFICATES=scratch
-ARG PKG_CRYPTSETUP=scratch
-ARG PKG_CONTAINERD=scratch
-ARG PKG_DOSFSTOOLS=scratch
-ARG PKG_E2FSPROGS=scratch
-ARG PKG_SYSTEMD_UDEVD=scratch
-ARG PKG_LIBCAP=scratch
-ARG PKG_GRUB=scratch
-ARG PKG_SD_BOOT=scratch
-ARG PKG_IPTABLES=scratch
-ARG PKG_IPXE=scratch
-ARG PKG_LIBINIH=scratch
-ARG PKG_LIBJSON_C=scratch
-ARG PKG_LIBMNL=scratch
-ARG PKG_LIBNFTNL=scratch
-ARG PKG_LIBPOPT=scratch
-ARG PKG_LIBSEPOL=scratch
-ARG PKG_LIBSELINUX=scratch
-ARG PKG_PCRE2=scratch
-ARG PKG_LIBURCU=scratch
-ARG PKG_OPENSSL=scratch
-ARG PKG_LIBSECCOMP=scratch
-ARG PKG_LINUX_FIRMWARE=scratch
-ARG PKG_LVM2=scratch
-ARG PKG_LIBAIO=scratch
-ARG PKG_MUSL=scratch
-ARG PKG_RUNC=scratch
-ARG PKG_XFSPROGS=scratch
-ARG PKG_APPARMOR=scratch
-ARG PKG_UTIL_LINUX=scratch
-ARG PKG_KMOD=scratch
-ARG PKG_KERNEL=scratch
-ARG PKG_CNI=scratch
-ARG PKG_FLANNEL_CNI=scratch
-ARG PKG_TALOSCTL_CNI_BUNDLE_INSTALL=scratch
+ARG PKGS_PREFIX
+ARG PKG_FHS
+ARG PKG_CA_CERTIFICATES
+ARG PKG_CRYPTSETUP
+ARG PKG_CONTAINERD
+ARG PKG_DOSFSTOOLS
+ARG PKG_SYSTEMD_UDEVD
+ARG PKG_LIBCAP
+ARG PKG_GRUB
+ARG PKG_SD_BOOT
+ARG PKG_IPTABLES
+ARG PKG_IPXE
+ARG PKG_LIBINIH
+ARG PKG_LIBJSON_C
+ARG PKG_LIBPOPT
+ARG PKG_LIBSEPOL
+ARG PKG_LIBSELINUX
+ARG PKG_PCRE2
+ARG PKG_LIBURCU
+ARG PKG_OPENSSL
+ARG PKG_LIBSECCOMP
+ARG PKG_LINUX_FIRMWARE
+ARG PKG_LVM2
+ARG PKG_LIBAIO
+ARG PKG_MUSL
+ARG PKG_RUNC
+ARG PKG_XFSPROGS
+ARG PKG_APPARMOR
+ARG PKG_UTIL_LINUX
+ARG PKG_KMOD
+ARG PKG_KERNEL
+ARG PKG_CNI
+ARG PKG_FLANNEL_CNI
+ARG PKG_TALOSCTL_CNI_BUNDLE_INSTALL
 
-ARG DEBUG_TOOLS_SOURCE=scratch
-
-ARG EMBED_TARGET=embed
+ARG DEBUG_TOOLS_SOURCE
 
 # Resolve package images using ${PKGS} to be used later in COPY --from=.
 
@@ -66,9 +61,6 @@ FROM --platform=arm64 ${PKG_CONTAINERD} AS pkg-containerd-arm64
 
 FROM --platform=amd64 ${PKG_DOSFSTOOLS} AS pkg-dosfstools-amd64
 FROM --platform=arm64 ${PKG_DOSFSTOOLS} AS pkg-dosfstools-arm64
-
-FROM --platform=amd64 ${PKG_E2FSPROGS} AS pkg-e2fsprogs-amd64
-FROM --platform=arm64 ${PKG_E2FSPROGS} AS pkg-e2fsprogs-arm64
 
 FROM --platform=amd64 ${PKG_SYSTEMD_UDEVD} AS pkg-systemd-udevd-amd64
 FROM --platform=arm64 ${PKG_SYSTEMD_UDEVD} AS pkg-systemd-udevd-arm64
@@ -95,12 +87,6 @@ FROM --platform=arm64 ${PKG_LIBINIH} AS pkg-libinih-arm64
 
 FROM --platform=amd64 ${PKG_LIBJSON_C} AS pkg-libjson-c-amd64
 FROM --platform=arm64 ${PKG_LIBJSON_C} AS pkg-libjson-c-arm64
-
-FROM --platform=amd64 ${PKG_LIBMNL} AS pkg-libmnl-amd64
-FROM --platform=arm64 ${PKG_LIBMNL} AS pkg-libmnl-arm64
-
-FROM --platform=amd64 ${PKG_LIBNFTNL} AS pkg-libnftnl-amd64
-FROM --platform=arm64 ${PKG_LIBNFTNL} AS pkg-libnftnl-arm64
 
 FROM --platform=amd64 ${PKG_LIBPOPT} AS pkg-libpopt-amd64
 FROM --platform=arm64 ${PKG_LIBPOPT} AS pkg-libpopt-arm64
@@ -287,43 +273,6 @@ RUN --mount=type=cache,target=/.cache go mod verify
 
 # The generate target generates code from protobuf service definitions and machinery config.
 
-FROM build AS embed-generate
-ARG NAME
-ARG SHA
-ARG USERNAME
-ARG REGISTRY
-ARG TAG
-ARG ARTIFACTS
-ARG PKGS
-ARG EXTRAS
-RUN mkdir -p pkg/machinery/gendata/data && \
-    echo -n ${NAME} > pkg/machinery/gendata/data/name && \
-    echo -n ${SHA} > pkg/machinery/gendata/data/sha && \
-    echo -n ${USERNAME} > pkg/machinery/gendata/data/username && \
-    echo -n ${REGISTRY} > pkg/machinery/gendata/data/registry && \
-    echo -n ${EXTRAS} > pkg/machinery/gendata/data/extras && \
-    echo -n ${PKGS} > pkg/machinery/gendata/data/pkgs && \
-    echo -n ${TAG} > pkg/machinery/gendata/data/tag && \
-    echo -n ${ARTIFACTS} > pkg/machinery/gendata/data/artifacts
-
-FROM scratch AS embed
-COPY --from=embed-generate /src/pkg/machinery/gendata/data /pkg/machinery/gendata/data
-
-FROM embed-generate AS embed-abbrev-generate
-ARG ABBREV_TAG
-RUN echo -n "undefined" > pkg/machinery/gendata/data/sha && \
-    echo -n ${ABBREV_TAG} > pkg/machinery/gendata/data/tag
-RUN mkdir -p _out && \
-    echo PKGS=${PKGS} >> _out/talos-metadata && \
-    echo TAG=${TAG} >> _out/talos-metadata && \
-    echo EXTRAS=${EXTRAS} >> _out/talos-metadata
-
-FROM scratch AS embed-abbrev
-COPY --from=embed-abbrev-generate /src/pkg/machinery/gendata/data /pkg/machinery/gendata/data
-COPY --from=embed-abbrev-generate /src/_out/talos-metadata /_out/talos-metadata
-
-FROM ${EMBED_TARGET} AS embed-target
-
 # generate API descriptors
 FROM build AS api-descriptors-build
 WORKDIR /src/api
@@ -347,7 +296,6 @@ COPY --from=proto-format-build /src/api/ /api/
 FROM build-go AS go-generate
 COPY ./pkg ./pkg
 COPY ./hack/boilerplate.txt ./hack/boilerplate.txt
-COPY --from=embed-target / ./
 RUN --mount=type=cache,target=/.cache go generate ./pkg/...
 RUN goimports -w -local github.com/siderolabs/talos ./pkg/
 RUN gofumpt -w ./pkg/
@@ -389,6 +337,43 @@ RUN find /api/resource/definitions/ -type f -name "*.proto" | xargs -I {} /bin/s
 # Goimports and gofumpt generated files to adjust import order
 RUN goimports -w -local github.com/siderolabs/talos /api/
 RUN gofumpt -w /api/
+
+FROM build AS embed-generate
+ARG NAME
+ARG SHA
+ARG USERNAME
+ARG REGISTRY
+ARG TAG
+ARG ARTIFACTS
+ARG PKGS
+ARG EXTRAS
+RUN mkdir -p pkg/machinery/gendata/data && \
+    echo -n ${NAME} > pkg/machinery/gendata/data/name && \
+    echo -n ${SHA} > pkg/machinery/gendata/data/sha && \
+    echo -n ${USERNAME} > pkg/machinery/gendata/data/username && \
+    echo -n ${REGISTRY} > pkg/machinery/gendata/data/registry && \
+    echo -n ${EXTRAS} > pkg/machinery/gendata/data/extras && \
+    echo -n ${PKGS} > pkg/machinery/gendata/data/pkgs && \
+    echo -n ${TAG} > pkg/machinery/gendata/data/tag && \
+    echo -n ${ARTIFACTS} > pkg/machinery/gendata/data/artifacts
+
+FROM scratch AS embed
+COPY --from=embed-generate /src/pkg/machinery/gendata/data /pkg/machinery/gendata/data
+
+FROM embed-generate AS embed-abbrev-generate
+ARG ABBREV_TAG
+RUN echo -n "undefined" > pkg/machinery/gendata/data/sha && \
+    echo -n ${ABBREV_TAG} > pkg/machinery/gendata/data/tag
+RUN mkdir -p _out && \
+    echo PKGS=${PKGS} >> _out/talos-metadata && \
+    echo TAG=${TAG} >> _out/talos-metadata && \
+    echo EXTRAS=${EXTRAS} >> _out/talos-metadata
+COPY --from=pkg-kernel /certs/signing_key.x509 _out/signing_key.x509
+
+FROM scratch AS embed-abbrev
+COPY --from=embed-abbrev-generate /src/pkg/machinery/gendata/data /pkg/machinery/gendata/data
+COPY --from=embed-abbrev-generate /src/_out/talos-metadata /_out/talos-metadata
+COPY --from=embed-abbrev-generate /src/_out/signing_key.x509 /_out/signing_key.x509
 
 FROM tools AS selinux
 COPY ./internal/pkg/selinux/policy/* /selinux/
@@ -433,7 +418,6 @@ COPY --from=go-generate /src/pkg/machinery/config/schemas/ /pkg/machinery/config
 COPY --from=go-generate /src/pkg/machinery/config/types/ /pkg/machinery/config/types/
 COPY --from=go-generate /src/pkg/machinery/nethelpers/ /pkg/machinery/nethelpers/
 COPY --from=go-generate /src/pkg/machinery/extensions/ /pkg/machinery/extensions/
-COPY --from=go-generate /src/pkg/machinery/version/os-release /pkg/machinery/version/os-release
 COPY --from=ipxe-generate / /pkg/provision/providers/vm/internal/ipxe/data/ipxe/
 COPY --from=selinux-generate / /internal/pkg/selinux/
 COPY --from=embed-abbrev / /
@@ -689,14 +673,11 @@ COPY --link --from=pkg-flannel-cni-amd64 / /rootfs
 COPY --link --from=pkg-cryptsetup-amd64 / /rootfs
 COPY --link --from=pkg-containerd-amd64 / /rootfs
 COPY --link --from=pkg-dosfstools-amd64 / /rootfs
-COPY --link --from=pkg-e2fsprogs-amd64 / /rootfs
 COPY --link --from=pkg-systemd-udevd-amd64 / /rootfs
 COPY --link --from=pkg-libcap-amd64 / /rootfs
 COPY --link --from=pkg-iptables-amd64 / /rootfs
 COPY --link --from=pkg-libinih-amd64 / /rootfs
 COPY --link --from=pkg-libjson-c-amd64 / /rootfs
-COPY --link --from=pkg-libmnl-amd64 / /rootfs
-COPY --link --from=pkg-libnftnl-amd64 / /rootfs
 COPY --link --from=pkg-libpopt-amd64 / /rootfs
 COPY --link --from=pkg-liburcu-amd64 / /rootfs
 COPY --link --from=pkg-libsepol-amd64 / /rootfs
@@ -736,7 +717,7 @@ COPY ./hack/cleanup.sh /toolchain/bin/cleanup.sh
 RUN <<END
     cleanup.sh /rootfs
     mkdir -pv /rootfs/{boot/EFI,etc/cri/conf.d/hosts,lib/firmware,usr/etc,usr/local/share,usr/share/zoneinfo/Etc,mnt,system,opt,.extra}
-    mkdir -pv /rootfs/{etc/kubernetes/manifests,etc/cni/net.d,etc/ssl/certs,usr/libexec/kubernetes,/usr/local/lib/kubelet/credentialproviders,etc/selinux/targeted/contexts/files}
+    mkdir -pv /rootfs/{etc/kubernetes/manifests,etc/cni/net.d,etc/ssl/certs,usr/libexec/kubernetes,/usr/local/lib/kubelet/credentialproviders}
     mkdir -pv /rootfs/opt/{containerd/bin,containerd/lib}
 END
 COPY --chmod=0644 hack/zoneinfo/Etc/UTC /rootfs/usr/share/zoneinfo/Etc/UTC
@@ -744,13 +725,11 @@ COPY --chmod=0644 hack/nfsmount.conf /rootfs/etc/nfsmount.conf
 COPY --chmod=0644 hack/containerd.toml /rootfs/etc/containerd/config.toml
 COPY --chmod=0644 hack/cri-containerd.toml /rootfs/etc/cri/containerd.toml
 COPY --chmod=0644 hack/cri-plugin.part /rootfs/etc/cri/conf.d/00-base.part
-COPY --chmod=0644 hack/udevd/99-default.link /rootfs/usr/lib/systemd/network/
-COPY --chmod=0644 hack/udevd/90-selinux.rules /rootfs/usr/lib/udev/rules.d/
+COPY --chmod=0644 hack/udevd/80-net-name-slot.rules /rootfs/usr/lib/udev/rules.d/
 COPY --chmod=0644 hack/lvm.conf /rootfs/etc/lvm/lvm.conf
-COPY --chmod=0644 --from=base /src/pkg/machinery/version/os-release /rootfs/etc/os-release
 RUN <<END
     ln -s /usr/share/zoneinfo/Etc/UTC /rootfs/etc/localtime
-    touch /rootfs/etc/{extensions.yaml,resolv.conf,hosts,machine-id,cri/conf.d/cri.toml,cri/conf.d/01-registries.part,cri/conf.d/20-customization.part,cri/conf.d/base-spec.json,ssl/certs/ca-certificates,selinux/targeted/contexts/files/file_contexts}
+    touch /rootfs/etc/{extensions.yaml,resolv.conf,hosts,os-release,machine-id,cri/conf.d/cri.toml,cri/conf.d/01-registries.part,cri/conf.d/20-customization.part,ssl/certs/ca-certificates}
     ln -s ca-certificates /rootfs/etc/ssl/certs/ca-certificates.crt
     ln -s /etc/ssl /rootfs/etc/pki
     ln -s /etc/ssl /rootfs/usr/share/ca-certificates
@@ -766,14 +745,11 @@ COPY --link --from=pkg-flannel-cni-arm64 / /rootfs
 COPY --link --from=pkg-cryptsetup-arm64 / /rootfs
 COPY --link --from=pkg-containerd-arm64 / /rootfs
 COPY --link --from=pkg-dosfstools-arm64 / /rootfs
-COPY --link --from=pkg-e2fsprogs-arm64 / /rootfs
 COPY --link --from=pkg-systemd-udevd-arm64 / /rootfs
 COPY --link --from=pkg-libcap-arm64 / /rootfs
 COPY --link --from=pkg-iptables-arm64 / /rootfs
 COPY --link --from=pkg-libinih-arm64 / /rootfs
 COPY --link --from=pkg-libjson-c-arm64 / /rootfs
-COPY --link --from=pkg-libmnl-arm64 / /rootfs
-COPY --link --from=pkg-libnftnl-arm64 / /rootfs
 COPY --link --from=pkg-libpopt-arm64 / /rootfs
 COPY --link --from=pkg-liburcu-arm64 / /rootfs
 COPY --link --from=pkg-libsepol-arm64 / /rootfs
@@ -813,7 +789,7 @@ COPY ./hack/cleanup.sh /toolchain/bin/cleanup.sh
 RUN <<END
     cleanup.sh /rootfs
     mkdir -pv /rootfs/{boot/EFI,etc/cri/conf.d/hosts,lib/firmware,usr/etc,usr/local/share,usr/share/zoneinfo/Etc,mnt,system,opt,.extra}
-    mkdir -pv /rootfs/{etc/kubernetes/manifests,etc/cni/net.d,etc/ssl/certs,usr/libexec/kubernetes,/usr/local/lib/kubelet/credentialproviders,etc/selinux/targeted/contexts/files}
+    mkdir -pv /rootfs/{etc/kubernetes/manifests,etc/cni/net.d,etc/ssl/certs,usr/libexec/kubernetes,/usr/local/lib/kubelet/credentialproviders}
     mkdir -pv /rootfs/opt/{containerd/bin,containerd/lib}
 END
 COPY --chmod=0644 hack/zoneinfo/Etc/UTC /rootfs/usr/share/zoneinfo/Etc/UTC
@@ -821,13 +797,11 @@ COPY --chmod=0644 hack/nfsmount.conf /rootfs/etc/nfsmount.conf
 COPY --chmod=0644 hack/containerd.toml /rootfs/etc/containerd/config.toml
 COPY --chmod=0644 hack/cri-containerd.toml /rootfs/etc/cri/containerd.toml
 COPY --chmod=0644 hack/cri-plugin.part /rootfs/etc/cri/conf.d/00-base.part
-COPY --chmod=0644 hack/udevd/99-default.link /rootfs/usr/lib/systemd/network/
-COPY --chmod=0644 hack/udevd/90-selinux.rules /rootfs/usr/lib/udev/rules.d/
+COPY --chmod=0644 hack/udevd/80-net-name-slot.rules /rootfs/usr/lib/udev/rules.d/
 COPY --chmod=0644 hack/lvm.conf /rootfs/etc/lvm/lvm.conf
-COPY --chmod=0644 --from=base /src/pkg/machinery/version/os-release /rootfs/etc/os-release
 RUN <<END
     ln -s /usr/share/zoneinfo/Etc/UTC /rootfs/etc/localtime
-    touch /rootfs/etc/{extensions.yaml,resolv.conf,hosts,machine-id,cri/conf.d/cri.toml,cri/conf.d/01-registries.part,cri/conf.d/20-customization.part,cri/conf.d/base-spec.json,ssl/certs/ca-certificates,selinux/targeted/contexts/files/file_contexts}
+    touch /rootfs/etc/{extensions.yaml,resolv.conf,hosts,os-release,machine-id,cri/conf.d/cri.toml,cri/conf.d/01-registries.part,cri/conf.d/20-customization.part,ssl/certs/ca-certificates}
     ln -s /etc/ssl /rootfs/etc/pki
     ln -s ca-certificates /rootfs/etc/ssl/certs/ca-certificates.crt
     ln -s /etc/ssl /rootfs/usr/share/ca-certificates
@@ -948,9 +922,24 @@ FROM install-artifacts-${INSTALLER_ARCH} AS install-artifacts
 FROM alpine:3.20.3 AS installer-image
 ARG SOURCE_DATE_EPOCH
 ENV SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}
-ARG INSTALLER_PKGS
 RUN apk add --no-cache --update --no-scripts \
-    ${INSTALLER_PKGS}
+    bash \
+    binutils-aarch64 \
+    binutils-x86_64 \
+    cpio \
+    dosfstools \
+    efibootmgr \
+    kmod \
+    mtools \
+    pigz \
+    qemu-img \
+    squashfs-tools \
+    tar \
+    util-linux \
+    xfsprogs \
+    xorriso \
+    xz \
+    zstd
 ARG TARGETARCH
 ENV TARGETARCH=${TARGETARCH}
 COPY --from=installer-build /installer /bin/installer
@@ -1177,10 +1166,10 @@ RUN protoc \
     /protos/time/*.proto
 
 FROM scratch AS docs
-COPY --from=docs-build /tmp/configuration/ /website/content/v1.10/reference/configuration/
-COPY --from=docs-build /tmp/cli.md /website/content/v1.10/reference/
-COPY --from=docs-build /tmp/schemas /website/content/v1.10/schemas/
-COPY --from=proto-docs-build /tmp/api.md /website/content/v1.10/reference/
+COPY --from=docs-build /tmp/configuration/ /website/content/v1.9/reference/configuration/
+COPY --from=docs-build /tmp/cli.md /website/content/v1.9/reference/
+COPY --from=docs-build /tmp/schemas /website/content/v1.9/schemas/
+COPY --from=proto-docs-build /tmp/api.md /website/content/v1.9/reference/
 
 # The talosctl-cni-bundle builds the CNI bundle for talosctl.
 

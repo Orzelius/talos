@@ -12,7 +12,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"sync"
 	"text/tabwriter"
 
 	"github.com/cosi-project/runtime/pkg/resource"
@@ -112,7 +111,7 @@ var supportCmd = &cobra.Command{
 }
 
 func collectData(dest *os.File, progress chan bundle.Progress) error {
-	return WithClientNoNodes(func(ctx context.Context, c *client.Client) error {
+	return WithClient(func(ctx context.Context, c *client.Client) error {
 		clientset, err := getKubernetesClient(ctx, c)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create kubernetes client %s\n", err)
@@ -143,7 +142,11 @@ func collectData(dest *os.File, progress chan bundle.Progress) error {
 }
 
 func getKubernetesClient(ctx context.Context, c *client.Client) (*k8s.Clientset, error) {
-	kubeconfig, err := c.Kubeconfig(ctx)
+	if len(GlobalArgs.Endpoints) == 0 {
+		fmt.Fprintln(os.Stderr, "No endpoints set for the cluster, the command might not be able to get kubeconfig")
+	}
+
+	kubeconfig, err := c.Kubeconfig(client.WithNodes(ctx, GlobalArgs.Endpoints...))
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +284,6 @@ func showProgress(progress <-chan bundle.Progress, errors *supportBundleErrors) 
 	uiprogress.Start()
 
 	type nodeProgress struct {
-		mu    sync.Mutex
 		state string
 		bar   *uiprogress.Bar
 	}
@@ -296,39 +298,29 @@ func showProgress(progress <-chan bundle.Progress, errors *supportBundleErrors) 
 			ok bool
 		)
 
-		src := p.Source
-
-		if _, ok = nodes[p.Source]; !ok {
+		if np, ok = nodes[p.Source]; !ok {
 			bar := uiprogress.AddBar(p.Total)
 			bar = bar.AppendCompleted().PrependElapsed()
+
+			src := p.Source
 
 			np = &nodeProgress{
 				state: "initializing...",
 				bar:   bar,
 			}
 
-			bar.AppendFunc(
-				func(src string, np *nodeProgress) func(b *uiprogress.Bar) string {
-					return func(b *uiprogress.Bar) string {
-						np.mu.Lock()
-						defer np.mu.Unlock()
-
-						return fmt.Sprintf("%s: %s", src, np.state)
-					}
-				}(src, np),
-			)
+			bar.AppendFunc(func(b *uiprogress.Bar) string {
+				return fmt.Sprintf("%s: %s", src, np.state)
+			})
 
 			bar.Width = 20
 
 			nodes[src] = np
 		} else {
-			np = nodes[src]
+			np = nodes[p.Source]
 		}
 
-		np.mu.Lock()
 		np.state = p.State
-		np.mu.Unlock()
-
 		np.bar.Incr()
 	}
 

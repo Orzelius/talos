@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/siderolabs/gen/channel"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/go-retry/retry"
@@ -38,7 +37,6 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
@@ -111,35 +109,6 @@ func (k8sSuite *K8sSuite) GetK8sNodeByInternalIP(ctx context.Context, internalIP
 	}
 
 	return nil, fmt.Errorf("node with internal IP %s not found", internalIP)
-}
-
-// CleanupFailedPods deletes all pods in kube-system namespace with the status Failed.
-func (k8sSuite *K8sSuite) CleanupFailedPods(ctx context.Context, internalIP string) {
-	nodeName, err := k8sSuite.GetK8sNodeByInternalIP(ctx, internalIP)
-	if err != nil {
-		k8sSuite.T().Logf("failed to get node by internal IP %s: %v", internalIP, err)
-
-		return
-	}
-
-	pods, err := k8sSuite.Clientset.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", nodeName.Name).String(),
-	})
-	if err != nil {
-		k8sSuite.T().Logf("failed to list pods in kube-system namespace: %v", err)
-
-		return
-	}
-
-	for _, pod := range pods.Items {
-		if pod.Status.Phase == corev1.PodFailed {
-			if err := k8sSuite.Clientset.CoreV1().Pods("kube-system").Delete(ctx, pod.Name, metav1.DeleteOptions{}); err != nil {
-				k8sSuite.T().Logf("failed to delete pod %s: %v", pod.Name, err)
-			} else {
-				k8sSuite.T().Logf("deleted pod %s", pod.Name)
-			}
-		}
-	}
 }
 
 // WaitForK8sNodeReadinessStatus waits for node to have the given status.
@@ -313,14 +282,7 @@ func (p *pod) Exec(ctx context.Context, command string) (string, string, error) 
 }
 
 func (p *pod) Delete(ctx context.Context) error {
-	err := p.suite.Clientset.CoreV1().Pods(p.namespace).Delete(ctx, p.name, metav1.DeleteOptions{
-		GracePeriodSeconds: pointer.To[int64](0),
-	})
-	if err != nil && errors.IsNotFound(err) {
-		return nil
-	}
-
-	return err
+	return p.suite.Clientset.CoreV1().Pods(p.namespace).Delete(ctx, p.name, metav1.DeleteOptions{})
 }
 
 // NewPrivilegedPod creates a new pod definition with a random suffix
@@ -805,47 +767,4 @@ func (k8sSuite *K8sSuite) ToUnstructured(obj runtime.Object) unstructured.Unstru
 	u.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
 
 	return u
-}
-
-// SetupNodeInformer sets up a node informer for the given node name.
-func (k8sSuite *K8sSuite) SetupNodeInformer(ctx context.Context, nodeName string) <-chan *corev1.Node {
-	const metadataKeyName = "metadata.name="
-
-	watchCh := make(chan *corev1.Node)
-
-	informerFactory := informers.NewSharedInformerFactoryWithOptions(k8sSuite.Clientset, 30*time.Second, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-		options.FieldSelector = metadataKeyName + nodeName
-	}))
-
-	nodeInformer := informerFactory.Core().V1().Nodes().Informer()
-	_, err := nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj any) {
-			node, ok := obj.(*corev1.Node)
-			if !ok {
-				return
-			}
-
-			channel.SendWithContext(ctx, watchCh, node)
-		},
-		UpdateFunc: func(_, obj any) {
-			node, ok := obj.(*corev1.Node)
-			if !ok {
-				return
-			}
-
-			channel.SendWithContext(ctx, watchCh, node)
-		},
-	})
-	k8sSuite.Require().NoError(err)
-
-	informerFactory.Start(ctx.Done())
-	k8sSuite.T().Cleanup(informerFactory.Shutdown)
-
-	result := informerFactory.WaitForCacheSync(ctx.Done())
-
-	for k, v := range result {
-		k8sSuite.Assert().True(v, "informer %q failed to sync", k.String())
-	}
-
-	return watchCh
 }

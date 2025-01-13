@@ -76,37 +76,6 @@ func (ctrl *OperatorConfigController) Run(ctx context.Context, r controller.Runt
 
 		touchedIDs := make(map[resource.ID]struct{})
 
-		linkStatuses, err := safe.ReaderListAll[*network.LinkStatus](ctx, r)
-		if err != nil {
-			return fmt.Errorf("error listing link statuses: %w", err)
-		}
-
-		// build an alias/altname map and a list of all interfaces
-		linkAliasMap := map[string]string{}
-
-		for linkStatus := range linkStatuses.All() {
-			if linkStatus.TypedSpec().Alias != "" {
-				linkAliasMap[linkStatus.TypedSpec().Alias] = linkStatus.Metadata().ID()
-			}
-
-			for _, altName := range linkStatus.TypedSpec().AltNames {
-				linkAliasMap[altName] = linkStatus.Metadata().ID()
-			}
-		}
-
-		// direct names override aliases
-		for linkStatus := range linkStatuses.All() {
-			linkAliasMap[linkStatus.Metadata().ID()] = linkStatus.Metadata().ID()
-		}
-
-		lookupLinkName := func(linkName string) string {
-			if alias, ok := linkAliasMap[linkName]; ok {
-				return alias
-			}
-
-			return linkName
-		}
-
 		items, err := r.List(ctx, resource.NewMetadata(network.NamespaceName, network.DeviceConfigSpecType, "", resource.VersionUndefined))
 		if err != nil {
 			if !state.IsNotFoundError(err) {
@@ -140,7 +109,7 @@ func (ctrl *OperatorConfigController) Run(ctx context.Context, r controller.Runt
 
 				specs = append(specs, network.OperatorSpecSpec{
 					Operator:  network.OperatorDHCP4,
-					LinkName:  lookupLinkName(linkConfig.LinkName),
+					LinkName:  linkConfig.LinkName,
 					RequireUp: true,
 					DHCP4: network.DHCP4OperatorSpec{
 						RouteMetric: network.DefaultRouteMetric,
@@ -173,7 +142,7 @@ func (ctrl *OperatorConfigController) Run(ctx context.Context, r controller.Runt
 
 					specs = append(specs, network.OperatorSpecSpec{
 						Operator:  network.OperatorDHCP4,
-						LinkName:  lookupLinkName(device.Interface()),
+						LinkName:  device.Interface(),
 						RequireUp: true,
 						DHCP4: network.DHCP4OperatorSpec{
 							RouteMetric: routeMetric,
@@ -190,7 +159,7 @@ func (ctrl *OperatorConfigController) Run(ctx context.Context, r controller.Runt
 
 					specs = append(specs, network.OperatorSpecSpec{
 						Operator:  network.OperatorDHCP6,
-						LinkName:  lookupLinkName(device.Interface()),
+						LinkName:  device.Interface(),
 						RequireUp: true,
 						DHCP6: network.DHCP6OperatorSpec{
 							RouteMetric: routeMetric,
@@ -258,12 +227,19 @@ func (ctrl *OperatorConfigController) Run(ctx context.Context, r controller.Runt
 				// specs produced by operators, ignore
 			case network.ConfigCmdline, network.ConfigMachineConfiguration, network.ConfigPlatform:
 				// interface is configured explicitly, don't run default dhcp4
-				configuredInterfaces[lookupLinkName(linkSpec.Name)] = struct{}{}
+				configuredInterfaces[linkSpec.Name] = struct{}{}
 			}
 		}
 
 		// operators from defaults
-		for linkStatus := range linkStatuses.All() {
+		list, err = r.List(ctx, resource.NewMetadata(network.NamespaceName, network.LinkStatusType, "", resource.VersionUndefined))
+		if err != nil {
+			return fmt.Errorf("error listing link statuses: %w", err)
+		}
+
+		for _, item := range list.Items {
+			linkStatus := item.(*network.LinkStatus) //nolint:forcetypeassert
+
 			if linkStatus.TypedSpec().Physical() {
 				if _, configured := configuredInterfaces[linkStatus.Metadata().ID()]; !configured {
 					if _, ignored := ignoredInterfaces[linkStatus.Metadata().ID()]; !ignored {

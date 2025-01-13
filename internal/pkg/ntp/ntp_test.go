@@ -40,6 +40,11 @@ func TestNTPSuite(t *testing.T) {
 	suite.Run(t, new(NTPSuite))
 }
 
+func (suite *NTPSuite) SetupSuite() {
+	// disable RTC clock
+	ntp.RTCClockInitialize.Do(func() {})
+}
+
 func (suite *NTPSuite) SetupTest() {
 	suite.systemClock = time.Now().UTC()
 	suite.clockAdjustments = nil
@@ -189,7 +194,6 @@ func (suite *NTPSuite) TestSync() {
 
 	syncer.AdjustTime = suite.adjustSystemClock
 	syncer.CurrentTime = suite.getSystemClock
-	syncer.DisableRTC = true
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -221,7 +225,6 @@ func (suite *NTPSuite) TestSyncContinuous() {
 	syncer.AdjustTime = suite.adjustSystemClock
 	syncer.CurrentTime = suite.getSystemClock
 	syncer.NTPQuery = suite.fakeQuery
-	syncer.DisableRTC = true
 
 	syncer.MinPoll = time.Second
 	syncer.MaxPoll = time.Second
@@ -270,7 +273,6 @@ func (suite *NTPSuite) TestSyncKissOfDeath() {
 	syncer.AdjustTime = suite.adjustSystemClock
 	syncer.CurrentTime = suite.getSystemClock
 	syncer.NTPQuery = suite.fakeQuery
-	syncer.DisableRTC = true
 
 	syncer.MinPoll = time.Second
 	syncer.MaxPoll = time.Second
@@ -324,7 +326,6 @@ func (suite *NTPSuite) TestSyncWithSpikes() {
 	syncer.AdjustTime = suite.adjustSystemClock
 	syncer.CurrentTime = suite.getSystemClock
 	syncer.NTPQuery = suite.fakeQuery
-	syncer.DisableRTC = true
 
 	syncer.MinPoll = time.Second
 	syncer.MaxPoll = time.Second
@@ -376,7 +377,6 @@ func (suite *NTPSuite) TestSyncChangeTimeservers() {
 
 	syncer.AdjustTime = suite.adjustSystemClock
 	syncer.CurrentTime = suite.getSystemClock
-	syncer.DisableRTC = true
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -416,7 +416,6 @@ func (suite *NTPSuite) TestSyncIterateTimeservers() {
 	syncer.AdjustTime = suite.adjustSystemClock
 	syncer.CurrentTime = suite.getSystemClock
 	syncer.NTPQuery = suite.fakeQuery
-	syncer.DisableRTC = true
 
 	syncer.MinPoll = time.Second
 	syncer.MaxPoll = time.Second
@@ -469,7 +468,6 @@ func (suite *NTPSuite) TestSyncEpochChange() {
 	syncer.AdjustTime = suite.adjustSystemClock
 	syncer.CurrentTime = suite.getSystemClock
 	syncer.NTPQuery = suite.fakeQuery
-	syncer.DisableRTC = true
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -509,7 +507,6 @@ func (suite *NTPSuite) TestSyncSwitchTimeservers() {
 	syncer.AdjustTime = suite.adjustSystemClock
 	syncer.CurrentTime = suite.getSystemClock
 	syncer.NTPQuery = suite.fakeQuery
-	syncer.DisableRTC = true
 
 	syncer.MinPoll = time.Second
 	syncer.MaxPoll = time.Second

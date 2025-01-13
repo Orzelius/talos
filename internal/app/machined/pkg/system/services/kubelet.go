@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	containerdapi "github.com/containerd/containerd/v2/client"
@@ -18,7 +17,7 @@ import (
 	"github.com/cosi-project/runtime/pkg/resource"
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/siderolabs/talos/internal/app/machined/pkg/runtime"
 	"github.com/siderolabs/talos/internal/app/machined/pkg/system"
@@ -33,7 +32,6 @@ import (
 	"github.com/siderolabs/talos/pkg/conditions"
 	"github.com/siderolabs/talos/pkg/machinery/config/machine"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
-	"github.com/siderolabs/talos/pkg/machinery/resources/cri"
 	"github.com/siderolabs/talos/pkg/machinery/resources/k8s"
 	"github.com/siderolabs/talos/pkg/machinery/resources/network"
 	timeresource "github.com/siderolabs/talos/pkg/machinery/resources/time"
@@ -71,7 +69,7 @@ func (k *Kubelet) PreFunc(ctx context.Context, r runtime.Runtime) error {
 	// Pull the image and unpack it.
 	containerdctx := namespaces.WithNamespace(ctx, constants.SystemContainerdNamespace)
 
-	img, err := image.Pull(containerdctx, cri.RegistryBuilder(r.State().V1Alpha2().Resources()), client, spec.Image, image.WithSkipIfAlreadyPulled())
+	img, err := image.Pull(containerdctx, r.Config().Machine().Registries(), client, spec.Image, image.WithSkipIfAlreadyPulled())
 	if err != nil {
 		return err
 	}
@@ -195,7 +193,27 @@ func (k *Kubelet) Runner(r runtime.Runtime) (runner.Runner, error) {
 
 // HealthFunc implements the HealthcheckedService interface.
 func (k *Kubelet) HealthFunc(runtime.Runtime) health.Check {
-	return func(ctx context.Context) error { return simpleHealthCheck(ctx, "http://127.0.0.1:10248/healthz") }
+	return func(ctx context.Context) error {
+		req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:10248/healthz", nil)
+		if err != nil {
+			return err
+		}
+
+		req = req.WithContext(ctx)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		//nolint:errcheck
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("expected HTTP status OK, got %s", resp.Status)
+		}
+
+		return nil
+	}
 }
 
 // HealthSettings implements the HealthcheckedService interface.
@@ -228,28 +246,4 @@ func kubeletSeccomp(seccomp *specs.LinuxSeccomp) {
 			Args:   []specs.LinuxSeccompArg{},
 		},
 	)
-}
-
-func simpleHealthCheck(ctx context.Context, url string) error {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-
-	req = req.WithContext(ctx)
-
-	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose
-	if err != nil {
-		return err
-	}
-
-	bodyCloser := sync.OnceValue(resp.Body.Close)
-
-	defer bodyCloser() //nolint:errcheck
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("expected HTTP status OK, got %s", resp.Status)
-	}
-
-	return bodyCloser()
 }

@@ -22,7 +22,7 @@ import (
 
 // RebootSuite ...
 type RebootSuite struct {
-	base.K8sSuite
+	base.APISuite
 
 	ctx       context.Context //nolint:containedctx
 	ctxCancel context.CancelFunc
@@ -66,7 +66,6 @@ func (suite *RebootSuite) TestRebootNodeByNode() {
 			suite.ctx, node, func(nodeCtx context.Context) error {
 				return base.IgnoreGRPCUnavailable(suite.Client.Reboot(nodeCtx))
 			}, 10*time.Minute,
-			suite.CleanupFailedPods,
 		)
 	}
 }

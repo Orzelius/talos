@@ -90,7 +90,7 @@ controlPlane:
 {{< /highlight >}}</details> | |
 |`kubelet` |<a href="#Config.machine.kubelet">KubeletConfig</a> |Used to provide additional options to the kubelet. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 kubelet:
-    image: ghcr.io/siderolabs/kubelet:v1.32.0 # The `image` field is an optional reference to an alternative kubelet image.
+    image: ghcr.io/siderolabs/kubelet:v1.32.0-beta.0 # The `image` field is an optional reference to an alternative kubelet image.
     # The `extraArgs` field is used to provide additional flags to the kubelet.
     extraArgs:
         feature-gates: ServerSideApply=true
@@ -172,13 +172,13 @@ network:
           #     busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
           # # select a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
           # deviceSelector:
-          #     hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-          #     driver: virtio_net # Kernel driver, supports matching by wildcard.
+          #     hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+          #     driver: virtio # Kernel driver, supports matching by wildcard.
           # # select a device with bus prefix 00:*, a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
           # deviceSelector:
           #     - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-          #     - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-          #       driver: virtio_net # Kernel driver, supports matching by wildcard.
+          #     - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+          #       driver: virtio # Kernel driver, supports matching by wildcard.
 
           # # Bond specific options.
           # bond:
@@ -189,8 +189,8 @@ network:
           #     # Picks a network device using the selector.
           #     deviceSelectors:
           #         - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-          #         - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-          #           driver: virtio_net # Kernel driver, supports matching by wildcard.
+          #         - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+          #           driver: virtio # Kernel driver, supports matching by wildcard.
           #     mode: 802.3ad # A bond option.
           #     lacpRate: fast # A bond option.
 
@@ -249,10 +249,6 @@ network:
     nameservers:
         - 9.8.7.6
         - 8.7.6.5
-    # Used to statically set arbitrary search domains.
-    searchDomains:
-        - example.org
-        - example.com
 
     # # Allows for extra entries to be added to the `/etc/hosts` file
     # extraHostEntries:
@@ -426,14 +422,6 @@ seccompProfiles:
       value:
         defaultAction: SCMP_ACT_LOG
 {{< /highlight >}}</details> | |
-|`baseRuntimeSpecOverrides` |Unstructured |<details><summary>Override (patch) settings in the default OCI runtime spec for CRI containers.</summary><br />It can be used to set some default container settings which are not configurable in Kubernetes,<br />for example default ulimits.<br />Note: this change applies to all newly created containers, and it requires a reboot to take effect.</details> <details><summary>Show example(s)</summary>{{< highlight yaml >}}
-baseRuntimeSpecOverrides:
-    process:
-        rlimits:
-            - hard: 1024
-              soft: 1024
-              type: RLIMIT_NOFILE
-{{< /highlight >}}</details> | |
 |`nodeLabels` |map[string]string |<details><summary>Configures the node labels for the machine.</summary><br />Note: In the default Kubernetes configuration, worker nodes are restricted to set<br />labels with some prefixes (see [NodeRestriction](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction) admission plugin).</details> <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 nodeLabels:
     exampleLabel: exampleLabelValue
@@ -519,7 +507,7 @@ KubeletConfig represents the kubelet config values.
 {{< highlight yaml >}}
 machine:
     kubelet:
-        image: ghcr.io/siderolabs/kubelet:v1.32.0 # The `image` field is an optional reference to an alternative kubelet image.
+        image: ghcr.io/siderolabs/kubelet:v1.32.0-beta.0 # The `image` field is an optional reference to an alternative kubelet image.
         # The `extraArgs` field is used to provide additional flags to the kubelet.
         extraArgs:
             feature-gates: ServerSideApply=true
@@ -572,7 +560,7 @@ machine:
 | Field | Type | Description | Value(s) |
 |-------|------|-------------|----------|
 |`image` |string |The `image` field is an optional reference to an alternative kubelet image. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
-image: ghcr.io/siderolabs/kubelet:v1.32.0
+image: ghcr.io/siderolabs/kubelet:v1.32.0-beta.0
 {{< /highlight >}}</details> | |
 |`clusterDNS` |[]string |The `ClusterDNS` field is an optional reference to an alternative kubelet clusterDNS ip list. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 clusterDNS:
@@ -759,13 +747,13 @@ machine:
               #     busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
               # # select a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
               # deviceSelector:
-              #     hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-              #     driver: virtio_net # Kernel driver, supports matching by wildcard.
+              #     hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+              #     driver: virtio # Kernel driver, supports matching by wildcard.
               # # select a device with bus prefix 00:*, a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
               # deviceSelector:
               #     - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-              #     - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-              #       driver: virtio_net # Kernel driver, supports matching by wildcard.
+              #     - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+              #       driver: virtio # Kernel driver, supports matching by wildcard.
 
               # # Bond specific options.
               # bond:
@@ -776,8 +764,8 @@ machine:
               #     # Picks a network device using the selector.
               #     deviceSelectors:
               #         - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-              #         - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-              #           driver: virtio_net # Kernel driver, supports matching by wildcard.
+              #         - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+              #           driver: virtio # Kernel driver, supports matching by wildcard.
               #     mode: 802.3ad # A bond option.
               #     lacpRate: fast # A bond option.
 
@@ -836,10 +824,6 @@ machine:
         nameservers:
             - 9.8.7.6
             - 8.7.6.5
-        # Used to statically set arbitrary search domains.
-        searchDomains:
-            - example.org
-            - example.com
 
         # # Allows for extra entries to be added to the `/etc/hosts` file
         # extraHostEntries:
@@ -878,13 +862,13 @@ interfaces:
       #     busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
       # # select a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
       # deviceSelector:
-      #     hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-      #     driver: virtio_net # Kernel driver, supports matching by wildcard.
+      #     hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+      #     driver: virtio # Kernel driver, supports matching by wildcard.
       # # select a device with bus prefix 00:*, a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
       # deviceSelector:
       #     - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-      #     - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-      #       driver: virtio_net # Kernel driver, supports matching by wildcard.
+      #     - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+      #       driver: virtio # Kernel driver, supports matching by wildcard.
 
       # # Bond specific options.
       # bond:
@@ -895,8 +879,8 @@ interfaces:
       #     # Picks a network device using the selector.
       #     deviceSelectors:
       #         - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-      #         - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-      #           driver: virtio_net # Kernel driver, supports matching by wildcard.
+      #         - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+      #           driver: virtio # Kernel driver, supports matching by wildcard.
       #     mode: 802.3ad # A bond option.
       #     lacpRate: fast # A bond option.
 
@@ -957,11 +941,6 @@ nameservers:
     - 8.8.8.8
     - 1.1.1.1
 {{< /highlight >}}</details> | |
-|`searchDomains` |[]string |Used to statically set arbitrary search domains. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
-searchDomains:
-    - example.org
-    - example.com
-{{< /highlight >}}</details> | |
 |`extraHostEntries` |<a href="#Config.machine.network.extraHostEntries.">[]ExtraHost</a> |Allows for extra entries to be added to the `/etc/hosts` file <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 extraHostEntries:
     - ip: 192.168.1.100 # The IP of the host.
@@ -1007,13 +986,13 @@ machine:
               #     busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
               # # select a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
               # deviceSelector:
-              #     hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-              #     driver: virtio_net # Kernel driver, supports matching by wildcard.
+              #     hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+              #     driver: virtio # Kernel driver, supports matching by wildcard.
               # # select a device with bus prefix 00:*, a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
               # deviceSelector:
               #     - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-              #     - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-              #       driver: virtio_net # Kernel driver, supports matching by wildcard.
+              #     - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+              #       driver: virtio # Kernel driver, supports matching by wildcard.
 
               # # Bond specific options.
               # bond:
@@ -1024,8 +1003,8 @@ machine:
               #     # Picks a network device using the selector.
               #     deviceSelectors:
               #         - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-              #         - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-              #           driver: virtio_net # Kernel driver, supports matching by wildcard.
+              #         - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+              #           driver: virtio # Kernel driver, supports matching by wildcard.
               #     mode: 802.3ad # A bond option.
               #     lacpRate: fast # A bond option.
 
@@ -1093,8 +1072,8 @@ deviceSelector:
     busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
 {{< /highlight >}}{{< highlight yaml >}}
 deviceSelector:
-    hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-    driver: virtio_net # Kernel driver, supports matching by wildcard.
+    hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+    driver: virtio # Kernel driver, supports matching by wildcard.
 {{< /highlight >}}</details> | |
 |`addresses` |[]string |<details><summary>Assigns static IP addresses to the interface.</summary>An address can be specified either in proper CIDR notation or as a standalone address (netmask of all ones is assumed).</details> <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 addresses:
@@ -1122,8 +1101,8 @@ bond:
     # # select a device with bus prefix 00:*, a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
     # deviceSelectors:
     #     - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-    #     - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-    #       driver: virtio_net # Kernel driver, supports matching by wildcard.
+    #     - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+    #       driver: virtio # Kernel driver, supports matching by wildcard.
 {{< /highlight >}}</details> | |
 |`bridge` |<a href="#Config.machine.network.interfaces..bridge">Bridge</a> |Bridge specific options. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 bridge:
@@ -1200,8 +1179,8 @@ machine:
     network:
         interfaces:
             - deviceSelector:
-                hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-                driver: virtio_net # Kernel driver, supports matching by wildcard.
+                hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+                driver: virtio # Kernel driver, supports matching by wildcard.
 {{< /highlight >}}
 
 {{< highlight yaml >}}
@@ -1210,16 +1189,15 @@ machine:
         interfaces:
             - deviceSelector:
                 - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-                - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-                  driver: virtio_net # Kernel driver, supports matching by wildcard.
+                - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+                  driver: virtio # Kernel driver, supports matching by wildcard.
 {{< /highlight >}}
 
 
 | Field | Type | Description | Value(s) |
 |-------|------|-------------|----------|
 |`busPath` |string |PCI, USB bus prefix, supports matching by wildcard.  | |
-|`hardwareAddr` |string |Device hardware (MAC) address, supports matching by wildcard.  | |
-|`permanentAddr` |string |<details><summary>Device permanent hardware address, supports matching by wildcard.</summary>The permanent address doesn't change when the link is enslaved to a bond,<br />so it's recommended to use this field for bond members.</details>  | |
+|`hardwareAddr` |string |Device hardware address, supports matching by wildcard.  | |
 |`pciID` |string |PCI ID (vendor ID, product ID), supports matching by wildcard.  | |
 |`driver` |string |Kernel driver, supports matching by wildcard.  | |
 |`physical` |bool |Select only physical devices.  | |
@@ -1283,8 +1261,8 @@ machine:
                 # # select a device with bus prefix 00:*, a device with mac address matching `*:f0:ab` and `virtio` kernel driver.
                 # deviceSelectors:
                 #     - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-                #     - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-                #       driver: virtio_net # Kernel driver, supports matching by wildcard.
+                #     - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+                #       driver: virtio # Kernel driver, supports matching by wildcard.
 {{< /highlight >}}
 
 
@@ -1294,8 +1272,8 @@ machine:
 |`deviceSelectors` |<a href="#Config.machine.network.interfaces..bond.deviceSelectors.">[]NetworkDeviceSelector</a> |<details><summary>Picks a network device using the selector.</summary>Mutually exclusive with `interfaces`.<br />Supports partial match using wildcard syntax.</details> <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 deviceSelectors:
     - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-    - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-      driver: virtio_net # Kernel driver, supports matching by wildcard.
+    - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+      driver: virtio # Kernel driver, supports matching by wildcard.
 {{< /highlight >}}</details> | |
 |`arpIPTarget` |[]string |<details><summary>A bond option.</summary>Please see the official kernel documentation.<br />Not supported at the moment.</details>  | |
 |`mode` |string |<details><summary>A bond option.</summary>Please see the official kernel documentation.</details>  | |
@@ -1348,8 +1326,8 @@ machine:
         interfaces:
             - bond:
                 deviceSelectors:
-                    hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-                    driver: virtio_net # Kernel driver, supports matching by wildcard.
+                    hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+                    driver: virtio # Kernel driver, supports matching by wildcard.
 {{< /highlight >}}
 
 {{< highlight yaml >}}
@@ -1359,16 +1337,15 @@ machine:
             - bond:
                 deviceSelectors:
                     - busPath: 00:* # PCI, USB bus prefix, supports matching by wildcard.
-                    - hardwareAddr: '*:f0:ab' # Device hardware (MAC) address, supports matching by wildcard.
-                      driver: virtio_net # Kernel driver, supports matching by wildcard.
+                    - hardwareAddr: '*:f0:ab' # Device hardware address, supports matching by wildcard.
+                      driver: virtio # Kernel driver, supports matching by wildcard.
 {{< /highlight >}}
 
 
 | Field | Type | Description | Value(s) |
 |-------|------|-------------|----------|
 |`busPath` |string |PCI, USB bus prefix, supports matching by wildcard.  | |
-|`hardwareAddr` |string |Device hardware (MAC) address, supports matching by wildcard.  | |
-|`permanentAddr` |string |<details><summary>Device permanent hardware address, supports matching by wildcard.</summary>The permanent address doesn't change when the link is enslaved to a bond,<br />so it's recommended to use this field for bond members.</details>  | |
+|`hardwareAddr` |string |Device hardware address, supports matching by wildcard.  | |
 |`pciID` |string |PCI ID (vendor ID, product ID), supports matching by wildcard.  | |
 |`driver` |string |Kernel driver, supports matching by wildcard.  | |
 |`physical` |bool |Select only physical devices.  | |
@@ -2648,8 +2625,6 @@ kubernetesTalosAPIAccess:
 |`diskQuotaSupport` |bool |<details><summary>Enable XFS project quota support for EPHEMERAL partition and user disks.</summary>Also enables kubelet tracking of ephemeral disk usage in the kubelet via quota.</details>  | |
 |`kubePrism` |<a href="#Config.machine.features.kubePrism">KubePrism</a> |<details><summary>KubePrism - local proxy/load balancer on defined port that will distribute</summary>requests to all API servers in the cluster.</details>  | |
 |`hostDNS` |<a href="#Config.machine.features.hostDNS">HostDNSConfig</a> |Configures host DNS caching resolver.  | |
-|`imageCache` |<a href="#Config.machine.features.imageCache">ImageCacheConfig</a> |Enable Image Cache feature.  | |
-|`nodeAddressSortAlgorithm` |string |<details><summary>Select the node address sort algorithm.</summary>The 'v1' algorithm sorts addresses by the address itself.<br />The 'v2' algorithm prefers more specific prefixes.<br />If unset, defaults to 'v1'.</details>  | |
 
 
 
@@ -2714,22 +2689,6 @@ HostDNSConfig describes the configuration for the host DNS resolver.
 |`enabled` |bool |Enable host DNS caching resolver.  | |
 |`forwardKubeDNSToHost` |bool |<details><summary>Use the host DNS resolver as upstream for Kubernetes CoreDNS pods.</summary><br />When enabled, CoreDNS pods use host DNS server as the upstream DNS (instead of<br />using configured upstream DNS resolvers directly).</details>  | |
 |`resolveMemberNames` |bool |<details><summary>Resolve member hostnames using the host DNS resolver.</summary><br />When enabled, cluster member hostnames and node names are resolved using the host DNS resolver.<br />This requires service discovery to be enabled.</details>  | |
-
-
-
-
-
-
-#### imageCache {#Config.machine.features.imageCache}
-
-ImageCacheConfig describes the configuration for the Image Cache feature.
-
-
-
-
-| Field | Type | Description | Value(s) |
-|-------|------|-------------|----------|
-|`localEnabled` |bool |Enable local image cache.  | |
 
 
 
@@ -2998,7 +2957,7 @@ serviceAccount:
 {{< /highlight >}}</details> | |
 |`apiServer` |<a href="#Config.cluster.apiServer">APIServerConfig</a> |API server specific configuration options. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 apiServer:
-    image: registry.k8s.io/kube-apiserver:v1.32.0 # The container image used in the API server manifest.
+    image: registry.k8s.io/kube-apiserver:v1.32.0-beta.0 # The container image used in the API server manifest.
     # Extra arguments to supply to the API server.
     extraArgs:
         feature-gates: ServerSideApply=true
@@ -3034,43 +2993,17 @@ apiServer:
     #     kind: Policy
     #     rules:
     #         - level: Metadata
-
-    # # Configure the API server authorization config. Node and RBAC authorizers are always added irrespective of the configuration.
-    # authorizationConfig:
-    #     - type: Webhook # Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.
-    #       name: webhook # Name is used to describe the authorizer.
-    #       # webhook is the configuration for the webhook authorizer.
-    #       webhook:
-    #         connectionInfo:
-    #             type: InClusterConfig
-    #         failurePolicy: Deny
-    #         matchConditionSubjectAccessReviewVersion: v1
-    #         matchConditions:
-    #             - expression: has(request.resourceAttributes)
-    #             - expression: '!(\''system:serviceaccounts:kube-system\'' in request.groups)'
-    #         subjectAccessReviewVersion: v1
-    #         timeout: 3s
-    #     - type: Webhook # Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.
-    #       name: in-cluster-authorizer # Name is used to describe the authorizer.
-    #       # webhook is the configuration for the webhook authorizer.
-    #       webhook:
-    #         connectionInfo:
-    #             type: InClusterConfig
-    #         failurePolicy: NoOpinion
-    #         matchConditionSubjectAccessReviewVersion: v1
-    #         subjectAccessReviewVersion: v1
-    #         timeout: 3s
 {{< /highlight >}}</details> | |
 |`controllerManager` |<a href="#Config.cluster.controllerManager">ControllerManagerConfig</a> |Controller manager server specific configuration options. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 controllerManager:
-    image: registry.k8s.io/kube-controller-manager:v1.32.0 # The container image used in the controller manager manifest.
+    image: registry.k8s.io/kube-controller-manager:v1.32.0-beta.0 # The container image used in the controller manager manifest.
     # Extra arguments to supply to the controller manager.
     extraArgs:
         feature-gates: ServerSideApply=true
 {{< /highlight >}}</details> | |
 |`proxy` |<a href="#Config.cluster.proxy">ProxyConfig</a> |Kube-proxy server-specific configuration options <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 proxy:
-    image: registry.k8s.io/kube-proxy:v1.32.0 # The container image used in the kube-proxy manifest.
+    image: registry.k8s.io/kube-proxy:v1.32.0-beta.0 # The container image used in the kube-proxy manifest.
     mode: ipvs # proxy mode of kube-proxy.
     # Extra arguments to supply to kube-proxy.
     extraArgs:
@@ -3081,7 +3014,7 @@ proxy:
 {{< /highlight >}}</details> | |
 |`scheduler` |<a href="#Config.cluster.scheduler">SchedulerConfig</a> |Scheduler server specific configuration options. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 scheduler:
-    image: registry.k8s.io/kube-scheduler:v1.32.0 # The container image used in the scheduler manifest.
+    image: registry.k8s.io/kube-scheduler:v1.32.0-beta.0 # The container image used in the scheduler manifest.
     # Extra arguments to supply to the scheduler.
     extraArgs:
         feature-gates: AllBeta=true
@@ -3114,7 +3047,7 @@ etcd:
 {{< /highlight >}}</details> | |
 |`coreDNS` |<a href="#Config.cluster.coreDNS">CoreDNS</a> |Core DNS specific configuration options. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 coreDNS:
-    image: registry.k8s.io/coredns/coredns:v1.12.0 # The `image` field is an override to the default coredns image.
+    image: registry.k8s.io/coredns/coredns:v1.11.3 # The `image` field is an override to the default coredns image.
 {{< /highlight >}}</details> | |
 |`externalCloudProvider` |<a href="#Config.cluster.externalCloudProvider">ExternalCloudProviderConfig</a> |External cloud provider configuration. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
 externalCloudProvider:
@@ -3325,7 +3258,7 @@ APIServerConfig represents the kube apiserver configuration options.
 {{< highlight yaml >}}
 cluster:
     apiServer:
-        image: registry.k8s.io/kube-apiserver:v1.32.0 # The container image used in the API server manifest.
+        image: registry.k8s.io/kube-apiserver:v1.32.0-beta.0 # The container image used in the API server manifest.
         # Extra arguments to supply to the API server.
         extraArgs:
             feature-gates: ServerSideApply=true
@@ -3361,39 +3294,13 @@ cluster:
         #     kind: Policy
         #     rules:
         #         - level: Metadata
-
-        # # Configure the API server authorization config. Node and RBAC authorizers are always added irrespective of the configuration.
-        # authorizationConfig:
-        #     - type: Webhook # Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.
-        #       name: webhook # Name is used to describe the authorizer.
-        #       # webhook is the configuration for the webhook authorizer.
-        #       webhook:
-        #         connectionInfo:
-        #             type: InClusterConfig
-        #         failurePolicy: Deny
-        #         matchConditionSubjectAccessReviewVersion: v1
-        #         matchConditions:
-        #             - expression: has(request.resourceAttributes)
-        #             - expression: '!(\''system:serviceaccounts:kube-system\'' in request.groups)'
-        #         subjectAccessReviewVersion: v1
-        #         timeout: 3s
-        #     - type: Webhook # Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.
-        #       name: in-cluster-authorizer # Name is used to describe the authorizer.
-        #       # webhook is the configuration for the webhook authorizer.
-        #       webhook:
-        #         connectionInfo:
-        #             type: InClusterConfig
-        #         failurePolicy: NoOpinion
-        #         matchConditionSubjectAccessReviewVersion: v1
-        #         subjectAccessReviewVersion: v1
-        #         timeout: 3s
 {{< /highlight >}}
 
 
 | Field | Type | Description | Value(s) |
 |-------|------|-------------|----------|
 |`image` |string |The container image used in the API server manifest. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
-image: registry.k8s.io/kube-apiserver:v1.32.0
+image: registry.k8s.io/kube-apiserver:v1.32.0-beta.0
 {{< /highlight >}}</details> | |
 |`extraArgs` |map[string]string |Extra arguments to supply to the API server.  | |
 |`extraVolumes` |<a href="#Config.cluster.apiServer.extraVolumes.">[]VolumeMountConfig</a> |Extra volumes to mount to the API server static pod.  | |
@@ -3428,32 +3335,6 @@ auditPolicy:
         - level: Metadata
 {{< /highlight >}}</details> | |
 |`resources` |<a href="#Config.cluster.apiServer.resources">ResourcesConfig</a> |Configure the API server resources.  | |
-|`authorizationConfig` |<a href="#Config.cluster.apiServer.authorizationConfig.">[]AuthorizationConfigAuthorizerConfig</a> |Configure the API server authorization config. Node and RBAC authorizers are always added irrespective of the configuration. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
-authorizationConfig:
-    - type: Webhook # Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.
-      name: webhook # Name is used to describe the authorizer.
-      # webhook is the configuration for the webhook authorizer.
-      webhook:
-        connectionInfo:
-            type: InClusterConfig
-        failurePolicy: Deny
-        matchConditionSubjectAccessReviewVersion: v1
-        matchConditions:
-            - expression: has(request.resourceAttributes)
-            - expression: '!(\''system:serviceaccounts:kube-system\'' in request.groups)'
-        subjectAccessReviewVersion: v1
-        timeout: 3s
-    - type: Webhook # Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.
-      name: in-cluster-authorizer # Name is used to describe the authorizer.
-      # webhook is the configuration for the webhook authorizer.
-      webhook:
-        connectionInfo:
-            type: InClusterConfig
-        failurePolicy: NoOpinion
-        matchConditionSubjectAccessReviewVersion: v1
-        subjectAccessReviewVersion: v1
-        timeout: 3s
-{{< /highlight >}}</details> | |
 
 
 
@@ -3547,53 +3428,6 @@ limits:
 
 
 
-#### authorizationConfig[] {#Config.cluster.apiServer.authorizationConfig.}
-
-AuthorizationConfigAuthorizerConfig represents the API server authorization config authorizer configuration.
-
-
-
-{{< highlight yaml >}}
-cluster:
-    apiServer:
-        authorizationConfig:
-            - type: Webhook # Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.
-              name: webhook # Name is used to describe the authorizer.
-              # webhook is the configuration for the webhook authorizer.
-              webhook:
-                connectionInfo:
-                    type: InClusterConfig
-                failurePolicy: Deny
-                matchConditionSubjectAccessReviewVersion: v1
-                matchConditions:
-                    - expression: has(request.resourceAttributes)
-                    - expression: '!(\''system:serviceaccounts:kube-system\'' in request.groups)'
-                subjectAccessReviewVersion: v1
-                timeout: 3s
-            - type: Webhook # Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.
-              name: in-cluster-authorizer # Name is used to describe the authorizer.
-              # webhook is the configuration for the webhook authorizer.
-              webhook:
-                connectionInfo:
-                    type: InClusterConfig
-                failurePolicy: NoOpinion
-                matchConditionSubjectAccessReviewVersion: v1
-                subjectAccessReviewVersion: v1
-                timeout: 3s
-{{< /highlight >}}
-
-
-| Field | Type | Description | Value(s) |
-|-------|------|-------------|----------|
-|`type` |string |Type is the name of the authorizer. Allowed values are `Node`, `RBAC`, and `Webhook`.  | |
-|`name` |string |Name is used to describe the authorizer.  | |
-|`webhook` |Unstructured |webhook is the configuration for the webhook authorizer.  | |
-
-
-
-
-
-
 
 
 ### controllerManager {#Config.cluster.controllerManager}
@@ -3605,7 +3439,7 @@ ControllerManagerConfig represents the kube controller manager configuration opt
 {{< highlight yaml >}}
 cluster:
     controllerManager:
-        image: registry.k8s.io/kube-controller-manager:v1.32.0 # The container image used in the controller manager manifest.
+        image: registry.k8s.io/kube-controller-manager:v1.32.0-beta.0 # The container image used in the controller manager manifest.
         # Extra arguments to supply to the controller manager.
         extraArgs:
             feature-gates: ServerSideApply=true
@@ -3615,7 +3449,7 @@ cluster:
 | Field | Type | Description | Value(s) |
 |-------|------|-------------|----------|
 |`image` |string |The container image used in the controller manager manifest. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
-image: registry.k8s.io/kube-controller-manager:v1.32.0
+image: registry.k8s.io/kube-controller-manager:v1.32.0-beta.0
 {{< /highlight >}}</details> | |
 |`extraArgs` |map[string]string |Extra arguments to supply to the controller manager.  | |
 |`extraVolumes` |<a href="#Config.cluster.controllerManager.extraVolumes.">[]VolumeMountConfig</a> |Extra volumes to mount to the controller manager static pod.  | |
@@ -3685,7 +3519,7 @@ ProxyConfig represents the kube proxy configuration options.
 {{< highlight yaml >}}
 cluster:
     proxy:
-        image: registry.k8s.io/kube-proxy:v1.32.0 # The container image used in the kube-proxy manifest.
+        image: registry.k8s.io/kube-proxy:v1.32.0-beta.0 # The container image used in the kube-proxy manifest.
         mode: ipvs # proxy mode of kube-proxy.
         # Extra arguments to supply to kube-proxy.
         extraArgs:
@@ -3702,7 +3536,7 @@ cluster:
 disabled: false
 {{< /highlight >}}</details> | |
 |`image` |string |The container image used in the kube-proxy manifest. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
-image: registry.k8s.io/kube-proxy:v1.32.0
+image: registry.k8s.io/kube-proxy:v1.32.0-beta.0
 {{< /highlight >}}</details> | |
 |`mode` |string |<details><summary>proxy mode of kube-proxy.</summary>The default is 'iptables'.</details>  | |
 |`extraArgs` |map[string]string |Extra arguments to supply to kube-proxy.  | |
@@ -3721,7 +3555,7 @@ SchedulerConfig represents the kube scheduler configuration options.
 {{< highlight yaml >}}
 cluster:
     scheduler:
-        image: registry.k8s.io/kube-scheduler:v1.32.0 # The container image used in the scheduler manifest.
+        image: registry.k8s.io/kube-scheduler:v1.32.0-beta.0 # The container image used in the scheduler manifest.
         # Extra arguments to supply to the scheduler.
         extraArgs:
             feature-gates: AllBeta=true
@@ -3731,7 +3565,7 @@ cluster:
 | Field | Type | Description | Value(s) |
 |-------|------|-------------|----------|
 |`image` |string |The container image used in the scheduler manifest. <details><summary>Show example(s)</summary>{{< highlight yaml >}}
-image: registry.k8s.io/kube-scheduler:v1.32.0
+image: registry.k8s.io/kube-scheduler:v1.32.0-beta.0
 {{< /highlight >}}</details> | |
 |`extraArgs` |map[string]string |Extra arguments to supply to the scheduler.  | |
 |`extraVolumes` |<a href="#Config.cluster.scheduler.extraVolumes.">[]VolumeMountConfig</a> |Extra volumes to mount to the scheduler static pod.  | |
@@ -3930,7 +3764,7 @@ CoreDNS represents the CoreDNS config values.
 {{< highlight yaml >}}
 cluster:
     coreDNS:
-        image: registry.k8s.io/coredns/coredns:v1.12.0 # The `image` field is an override to the default coredns image.
+        image: registry.k8s.io/coredns/coredns:v1.11.3 # The `image` field is an override to the default coredns image.
 {{< /highlight >}}
 
 

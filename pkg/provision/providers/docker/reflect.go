@@ -17,7 +17,7 @@ import (
 )
 
 //nolint:gocyclo
-func (p *provisioner) Reflect(ctx context.Context, clusterName, stateDirectory string) (provision.Cluster, error) {
+func (p *DockerProvisioner) Reflect(ctx context.Context, clusterName, stateDirectory string) (provision.Cluster, error) {
 	res := &result{
 		clusterInfo: provision.ClusterInfo{
 			ClusterName: clusterName,
@@ -51,10 +51,7 @@ func (p *provisioner) Reflect(ctx context.Context, clusterName, stateDirectory s
 			res.clusterInfo.Network.GatewayAddrs = append(res.clusterInfo.Network.GatewayAddrs, addr)
 		}
 
-		mtuStr, ok := network.Options["com.docker.network.driver.mtu"]
-		if !ok {
-			mtuStr = network.Options["mtu"] // Use the podman version of the option
-		}
+		mtuStr := network.Options["com.docker.network.driver.mtu"]
 
 		res.clusterInfo.Network.MTU, err = strconv.Atoi(mtuStr)
 		if err != nil {

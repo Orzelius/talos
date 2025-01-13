@@ -9,7 +9,6 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/siderolabs/talos/internal/pkg/selinux"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 )
 
@@ -25,8 +24,8 @@ func Pseudo() Points {
 // PseudoLate returns the mountpoints mounted later in the boot cycle.
 func PseudoLate() Points {
 	return Points{
-		NewPoint("tmpfs", "/run", "tmpfs", WithFlags(unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_RELATIME), WithData("mode=0755"), WithSelinuxLabel(constants.RunSelinuxLabel)),
-		NewPoint("tmpfs", "/system", "tmpfs", WithData("mode=0755"), WithSelinuxLabel(constants.SystemSelinuxLabel)),
+		NewPoint("tmpfs", "/run", "tmpfs", WithFlags(unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_RELATIME), WithData("mode=0755")),
+		NewPoint("tmpfs", "/system", "tmpfs", WithData("mode=0755")),
 		NewPoint("tmpfs", "/tmp", "tmpfs", WithFlags(unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_NODEV), WithData("size=64M"), WithData("mode=0755")),
 	}
 }
@@ -40,7 +39,6 @@ func PseudoSubMountPoints() Points {
 		NewPoint("bpf", "/sys/fs/bpf", "bpf"),
 		NewPoint("securityfs", "/sys/kernel/security", "securityfs", WithFlags(unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_NODEV|unix.MS_RELATIME)),
 		NewPoint("tracefs", "/sys/kernel/tracing", "tracefs", WithFlags(unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_NODEV)),
-		NewPoint("configfs", "/sys/kernel/config", "configfs", WithFlags(unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_NODEV|unix.MS_RELATIME)),
 	}
 
 	if _, err := os.Stat(constants.EFIVarsMountPoint); err == nil {
@@ -50,8 +48,8 @@ func PseudoSubMountPoints() Points {
 		)
 	}
 
-	if selinux.IsEnabled() {
-		// mount selinuxfs if it is enabled, which implies SELinux is the major LSM
+	if _, err := os.Stat("/sys/fs/selinux"); err == nil {
+		// mount selinuxfs if it exists
 		points = append(points,
 			NewPoint("selinuxfs", "/sys/fs/selinux", "selinuxfs", WithFlags(unix.MS_NOSUID|unix.MS_NOEXEC|unix.MS_RELATIME)),
 		)

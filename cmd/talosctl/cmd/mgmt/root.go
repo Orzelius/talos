@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/siderolabs/talos/cmd/talosctl/cmd/mgmt/cluster"
+	// import to register command via init function
+	_ "github.com/siderolabs/talos/cmd/talosctl/cmd/mgmt/cluster/create"
 	"github.com/siderolabs/talos/cmd/talosctl/cmd/mgmt/debug"
 	"github.com/siderolabs/talos/cmd/talosctl/cmd/mgmt/gen"
 	"github.com/siderolabs/talos/cmd/talosctl/cmd/mgmt/inject"

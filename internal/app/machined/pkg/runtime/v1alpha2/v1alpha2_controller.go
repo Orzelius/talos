@@ -40,7 +40,6 @@ import (
 	"github.com/siderolabs/talos/internal/app/machined/pkg/runtime"
 	runtimelogging "github.com/siderolabs/talos/internal/app/machined/pkg/runtime/logging"
 	"github.com/siderolabs/talos/internal/app/machined/pkg/system"
-	"github.com/siderolabs/talos/internal/pkg/mount"
 	"github.com/siderolabs/talos/pkg/logging"
 	talosconfig "github.com/siderolabs/talos/pkg/machinery/config/config"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
@@ -94,9 +93,7 @@ func (ctrl *Controller) Run(ctx context.Context, drainer *runtime.Drainer) error
 		},
 		&block.DiscoveryController{},
 		&block.DisksController{},
-		&block.LVMActivationController{
-			V1Alpha1Mode: ctrl.v1alpha1Runtime.State().Platform().Mode(),
-		},
+		&block.LVMActivationController{},
 		&block.SystemDiskController{},
 		&block.UserDiskConfigController{},
 		&block.VolumeConfigController{
@@ -131,10 +128,6 @@ func (ctrl *Controller) Run(ctx context.Context, drainer *runtime.Drainer) error
 			ResourceState:  ctrl.v1alpha1Runtime.State().V1Alpha2().Resources(),
 		},
 		&config.MachineTypeController{},
-		&cri.ImageCacheConfigController{
-			V1Alpha1ServiceManager: system.Services(ctrl.v1alpha1Runtime),
-			VolumeMounter:          mount.IdempotentSystemPartitionMounter(ctrl.v1alpha1Runtime),
-		},
 		&cri.SeccompProfileController{},
 		&cri.SeccompProfileFileController{
 			V1Alpha1Mode:             ctrl.v1alpha1Runtime.State().Platform().Mode(),
@@ -145,7 +138,6 @@ func (ctrl *Controller) Run(ctx context.Context, drainer *runtime.Drainer) error
 		&etcd.PKIController{},
 		&etcd.SpecController{},
 		&etcd.MemberController{},
-		&files.CRIBaseRuntimeSpecController{},
 		&files.CRIConfigPartsController{},
 		&files.CRIRegistryConfigController{},
 		&files.EtcFileController{
@@ -155,10 +147,6 @@ func (ctrl *Controller) Run(ctx context.Context, drainer *runtime.Drainer) error
 		&hardware.PCIDevicesController{
 			V1Alpha1Mode: ctrl.v1alpha1Runtime.State().Platform().Mode(),
 		},
-		&hardware.PCIDriverRebindConfigController{},
-		&hardware.PCIDriverRebindController{
-			V1Alpha1Mode: ctrl.v1alpha1Runtime.State().Platform().Mode(),
-		},
 		&hardware.SystemInfoController{
 			V1Alpha1Mode: ctrl.v1alpha1Runtime.State().Platform().Mode(),
 		},
@@ -166,7 +154,6 @@ func (ctrl *Controller) Run(ctx context.Context, drainer *runtime.Drainer) error
 		k8s.NewControlPlaneAPIServerController(),
 		k8s.NewControlPlaneAdmissionControlController(),
 		k8s.NewControlPlaneAuditPolicyController(),
-		k8s.NewControlPlaneAuthorizationController(),
 		k8s.NewControlPlaneBootstrapManifestsController(),
 		k8s.NewControlPlaneControllerManagerController(),
 		k8s.NewControlPlaneExtraManifestsController(),
@@ -248,7 +235,6 @@ func (ctrl *Controller) Run(ctx context.Context, drainer *runtime.Drainer) error
 		&network.NfTablesChainConfigController{},
 		&network.NfTablesChainController{},
 		&network.NodeAddressController{},
-		&network.NodeAddressSortAlgorithmController{},
 		&network.OperatorConfigController{
 			Cmdline: procfs.ProcCmdline(),
 		},
@@ -285,7 +271,6 @@ func (ctrl *Controller) Run(ctx context.Context, drainer *runtime.Drainer) error
 		&network.TimeServerMergeController{},
 		&network.TimeServerSpecController{},
 		&perf.StatsController{},
-		cri.NewRegistriesConfigController(),
 		&runtimecontrollers.CRIImageGCController{},
 		&runtimecontrollers.DevicesStatusController{
 			V1Alpha1Mode: ctrl.v1alpha1Runtime.State().Platform().Mode(),

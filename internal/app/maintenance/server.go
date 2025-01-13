@@ -70,12 +70,7 @@ func (s *Server) Register(obj *grpc.Server) {
 	resourceState := s.controller.Runtime().State().V1Alpha2().Resources()
 	resourceState = state.WrapCore(state.Filter(resourceState, resources.AccessPolicy(resourceState)))
 
-	storage.RegisterStorageServiceServer(obj,
-		&storaged.Server{
-			Controller:      s.controller,
-			MaintenanceMode: true,
-		},
-	)
+	storage.RegisterStorageServiceServer(obj, &storaged.Server{Controller: s.controller})
 	machine.RegisterMachineServiceServer(obj, s)
 	cosiv1alpha1.RegisterStateServer(obj, server.NewState(resourceState))
 }

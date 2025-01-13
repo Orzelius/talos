@@ -9,20 +9,15 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/cosi-project/runtime/pkg/state"
-	"github.com/siderolabs/gen/channel"
 	"github.com/siderolabs/gen/maps"
 	"github.com/siderolabs/go-procfs/procfs"
 	yaml "gopkg.in/yaml.v3"
 
 	"github.com/siderolabs/talos/internal/app/machined/pkg/runtime"
 	"github.com/siderolabs/talos/internal/app/machined/pkg/runtime/v1alpha1/platform/errors"
-	"github.com/siderolabs/talos/internal/app/machined/pkg/runtime/v1alpha1/platform/internal/netutils"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
-	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/resources/network"
 	runtimeres "github.com/siderolabs/talos/pkg/machinery/resources/runtime"
 )
@@ -36,7 +31,7 @@ func (n *Nocloud) Name() string {
 }
 
 // ParseMetadata converts nocloud metadata to platform network config.
-func (n *Nocloud) ParseMetadata(ctx context.Context, unmarshalledNetworkConfig *NetworkConfig, st state.State, metadata *MetadataConfig) (*runtime.PlatformNetworkConfig, bool, error) {
+func (n *Nocloud) ParseMetadata(unmarshalledNetworkConfig *NetworkConfig, st state.State, metadata *MetadataConfig) (*runtime.PlatformNetworkConfig, error) {
 	networkConfig := &runtime.PlatformNetworkConfig{}
 
 	hostname := metadata.Hostname
@@ -50,28 +45,23 @@ func (n *Nocloud) ParseMetadata(ctx context.Context, unmarshalledNetworkConfig *
 		}
 
 		if err := hostnameSpec.ParseFQDN(hostname); err != nil {
-			return nil, false, err
+			return nil, err
 		}
 
 		networkConfig.Hostnames = append(networkConfig.Hostnames, hostnameSpec)
 	}
 
-	var (
-		needsReconcile bool
-		err            error
-	)
-
 	switch unmarshalledNetworkConfig.Version {
 	case 1:
-		if needsReconcile, err = n.applyNetworkConfigV1(ctx, unmarshalledNetworkConfig, st, networkConfig); err != nil {
-			return nil, false, err
+		if err := n.applyNetworkConfigV1(unmarshalledNetworkConfig, st, networkConfig); err != nil {
+			return nil, err
 		}
 	case 2:
-		if needsReconcile, err = n.applyNetworkConfigV2(ctx, unmarshalledNetworkConfig, st, networkConfig); err != nil {
-			return nil, false, err
+		if err := n.applyNetworkConfigV2(unmarshalledNetworkConfig, st, networkConfig); err != nil {
+			return nil, err
 		}
 	default:
-		return nil, false, fmt.Errorf("network-config metadata version=%d is not supported", unmarshalledNetworkConfig.Version)
+		return nil, fmt.Errorf("network-config metadata version=%d is not supported", unmarshalledNetworkConfig.Version)
 	}
 
 	networkConfig.Metadata = &runtimeres.PlatformMetadataSpec{
@@ -86,7 +76,7 @@ func (n *Nocloud) ParseMetadata(ctx context.Context, unmarshalledNetworkConfig *
 		ExternalDNS:  metadata.ExternalDNS,
 	}
 
-	return networkConfig, needsReconcile, nil
+	return networkConfig, nil
 }
 
 // Configuration implements the runtime.Platform interface.
@@ -109,7 +99,7 @@ func (n *Nocloud) Mode() runtime.Mode {
 }
 
 // KernelArgs implements the runtime.Platform interface.
-func (n *Nocloud) KernelArgs(string, quirks.Quirks) procfs.Parameters {
+func (n *Nocloud) KernelArgs(string) procfs.Parameters {
 	return []*procfs.Parameter{
 		procfs.NewParameter("console").Append("tty1").Append("ttyS0"),
 		procfs.NewParameter(constants.KernelParamNetIfnames).Append("0"),
@@ -117,14 +107,7 @@ func (n *Nocloud) KernelArgs(string, quirks.Quirks) procfs.Parameters {
 }
 
 // NetworkConfiguration implements the runtime.Platform interface.
-//
-//nolint:gocyclo
 func (n *Nocloud) NetworkConfiguration(ctx context.Context, st state.State, ch chan<- *runtime.PlatformNetworkConfig) error {
-	// wait for devices to be ready before proceeding
-	if err := netutils.WaitForDevicesReady(ctx, st); err != nil {
-		return fmt.Errorf("error waiting for devices to be ready: %w", err)
-	}
-
 	metadataNetworkConfigDl, _, metadata, err := n.acquireConfig(ctx, st)
 	if stderrors.Is(err, errors.ErrNoConfigSource) {
 		err = nil
@@ -144,36 +127,18 @@ func (n *Nocloud) NetworkConfiguration(ctx context.Context, st state.State, ch c
 		return err
 	}
 
-	// do a loop to retry network config remap in case of missing links
-	// on each try, export the configuration as it is, and if the network is reconciled next time, export the reconciled configuration
-	for {
-		bckoff := backoff.NewExponentialBackOff()
-
-		networkConfig, needsReconcile, err := n.ParseMetadata(ctx, unmarshalledNetworkConfig, st, metadata)
-		if err != nil {
-			return err
-		}
-
-		if !channel.SendWithContext(ctx, ch, networkConfig) {
-			return ctx.Err()
-		}
-
-		if !needsReconcile {
-			return nil
-		}
-
-		// wait for for backoff to retry network config remap
-		nextBackoff := bckoff.NextBackOff()
-		if nextBackoff == backoff.Stop {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(nextBackoff):
-		}
+	networkConfig, err := n.ParseMetadata(unmarshalledNetworkConfig, st, metadata)
+	if err != nil {
+		return err
 	}
+
+	select {
+	case ch <- networkConfig:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	return nil
 }
 
 // DecodeNetworkConfig decodes the network configuration guessing the format from the content.

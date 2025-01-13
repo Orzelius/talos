@@ -115,7 +115,6 @@ func (suite *UpdateHostnameSuite) TestUpdateHostname() {
 			suite.ctx, nodeInternalIP, func(nodeCtx context.Context) error {
 				return base.IgnoreGRPCUnavailable(suite.Client.Reboot(nodeCtx))
 			}, 10*time.Minute,
-			suite.CleanupFailedPods,
 		)
 	}()
 

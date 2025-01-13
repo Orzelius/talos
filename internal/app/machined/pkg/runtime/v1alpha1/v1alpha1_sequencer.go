@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/go-procfs/procfs"
@@ -177,7 +176,6 @@ func (*Sequencer) Install(r runtime.Runtime) []runtime.Phase {
 			).Append(
 				"saveConfig",
 				SaveConfig,
-				Sleep(time.Second),
 			).Append(
 				"unmountState",
 				UnmountStatePartition,

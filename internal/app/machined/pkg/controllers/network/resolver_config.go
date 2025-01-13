@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
-	"slices"
 
 	"github.com/cosi-project/runtime/pkg/controller"
 	"github.com/cosi-project/runtime/pkg/resource"
@@ -41,12 +40,6 @@ func (ctrl *ResolverConfigController) Inputs() []controller.Input {
 			Namespace: config.NamespaceName,
 			Type:      config.MachineConfigType,
 			ID:        optional.Some(config.V1Alpha1ID),
-			Kind:      controller.InputWeak,
-		},
-		{
-			Namespace: network.NamespaceName,
-			Type:      network.HostnameStatusType,
-			ID:        optional.Some(network.HostnameID),
 			Kind:      controller.InputWeak,
 		},
 	}
@@ -88,20 +81,8 @@ func (ctrl *ResolverConfigController) Run(ctx context.Context, r controller.Runt
 
 		var specs []network.ResolverSpecSpec
 
-		hostnameStatus, err := safe.ReaderGetByID[*network.HostnameStatus](ctx, r, network.HostnameID)
-		if err != nil {
-			if !state.IsNotFoundError(err) {
-				return fmt.Errorf("error getting hostname status: %w", err)
-			}
-		}
-
-		var hostnameStatusSpec *network.HostnameStatusSpec
-		if hostnameStatus != nil {
-			hostnameStatusSpec = hostnameStatus.TypedSpec()
-		}
-
 		// defaults
-		specs = append(specs, ctrl.getDefault(cfgProvider, hostnameStatusSpec))
+		specs = append(specs, ctrl.getDefault())
 
 		// parse kernel cmdline for the default gateway
 		cmdlineServers := ctrl.parseCmdline(logger)
@@ -111,7 +92,9 @@ func (ctrl *ResolverConfigController) Run(ctx context.Context, r controller.Runt
 
 		// parse machine configuration for specs
 		if cfgProvider != nil {
-			if configServers, ok := ctrl.parseMachineConfiguration(logger, cfgProvider); ok {
+			configServers := ctrl.parseMachineConfiguration(logger, cfgProvider)
+
+			if configServers.DNSServers != nil {
 				specs = append(specs, configServers)
 			}
 		}
@@ -176,19 +159,9 @@ func (ctrl *ResolverConfigController) apply(ctx context.Context, r controller.Ru
 	return ids, nil
 }
 
-func (ctrl *ResolverConfigController) getDefault(cfg talosconfig.Config, hostnameStatus *network.HostnameStatusSpec) (spec network.ResolverSpecSpec) {
+func (ctrl *ResolverConfigController) getDefault() (spec network.ResolverSpecSpec) {
 	spec.DNSServers = []netip.Addr{netip.MustParseAddr(constants.DefaultPrimaryResolver), netip.MustParseAddr(constants.DefaultSecondaryResolver)}
 	spec.ConfigLayer = network.ConfigDefault
-
-	if cfg == nil ||
-		cfg.Machine() == nil ||
-		cfg.Machine().Network().DisableSearchDomain() ||
-		hostnameStatus == nil ||
-		hostnameStatus.Domainname == "" {
-		return spec
-	}
-
-	spec.SearchDomains = []string{hostnameStatus.Domainname}
 
 	return spec
 }
@@ -215,20 +188,17 @@ func (ctrl *ResolverConfigController) parseCmdline(logger *zap.Logger) (spec net
 	return spec
 }
 
-func (ctrl *ResolverConfigController) parseMachineConfiguration(logger *zap.Logger, cfgProvider talosconfig.Config) (network.ResolverSpecSpec, bool) {
-	var spec network.ResolverSpecSpec
-
+func (ctrl *ResolverConfigController) parseMachineConfiguration(logger *zap.Logger, cfgProvider talosconfig.Config) (spec network.ResolverSpecSpec) {
 	resolvers := cfgProvider.Machine().Network().Resolvers()
-	searchDomains := cfgProvider.Machine().Network().SearchDomains()
 
-	if len(resolvers) == 0 && len(searchDomains) == 0 {
-		return spec, false
+	if len(resolvers) == 0 {
+		return
 	}
 
-	for _, resolver := range resolvers {
-		server, err := netip.ParseAddr(resolver)
+	for i := range resolvers {
+		server, err := netip.ParseAddr(resolvers[i])
 		if err != nil {
-			logger.Warn("failed to parse DNS server", zap.String("server", resolver), zap.Error(err))
+			logger.Warn("failed to parse DNS server", zap.String("server", resolvers[i]), zap.Error(err))
 
 			continue
 		}
@@ -236,8 +206,7 @@ func (ctrl *ResolverConfigController) parseMachineConfiguration(logger *zap.Logg
 		spec.DNSServers = append(spec.DNSServers, server)
 	}
 
-	spec.SearchDomains = slices.Clone(searchDomains)
 	spec.ConfigLayer = network.ConfigMachineConfiguration
 
-	return spec, true
+	return spec
 }

@@ -7,7 +7,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -17,7 +16,6 @@ import (
 	"github.com/cosi-project/runtime/pkg/controller/generic/transform"
 	"github.com/siderolabs/gen/optional"
 	"github.com/siderolabs/gen/xslices"
-	"github.com/siderolabs/go-kubernetes/kubernetes/compatibility"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 
@@ -25,7 +23,6 @@ import (
 	"github.com/siderolabs/talos/pkg/images"
 	"github.com/siderolabs/talos/pkg/kubernetes"
 	talosconfig "github.com/siderolabs/talos/pkg/machinery/config/config"
-	"github.com/siderolabs/talos/pkg/machinery/config/types/v1alpha1"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/nethelpers"
 	"github.com/siderolabs/talos/pkg/machinery/resources/config"
@@ -97,55 +94,6 @@ func NewControlPlaneAuditPolicyController() *ControlPlaneAuditPolicyController {
 				cfgProvider := machineConfig.Config()
 
 				res.TypedSpec().Config = cfgProvider.Cluster().APIServer().AuditPolicy()
-
-				return nil
-			},
-		},
-	)
-}
-
-// ControlPlaneAuthorizationController manages k8s.AuthorizationConfig based on configuration.
-type ControlPlaneAuthorizationController = transform.Controller[*config.MachineConfig, *k8s.AuthorizationConfig]
-
-// NewControlPlaneAuthorizationController instanciates the controller.
-func NewControlPlaneAuthorizationController() *ControlPlaneAuthorizationController {
-	return transform.NewController(
-		transform.Settings[*config.MachineConfig, *k8s.AuthorizationConfig]{
-			Name:                    "k8s.ControlPlaneAuthorizationPolicyController",
-			MapMetadataOptionalFunc: controlplaneMapFunc(k8s.NewAuthorizationConfig()),
-			TransformFunc: func(ctx context.Context, r controller.Reader, logger *zap.Logger, machineConfig *config.MachineConfig, res *k8s.AuthorizationConfig) error {
-				cfgProvider := machineConfig.Config()
-
-				res.TypedSpec().Image = cfgProvider.Cluster().APIServer().Image()
-
-				if !compatibility.VersionFromImageRef(cfgProvider.Cluster().APIServer().Image()).KubeAPIServerSupportsAuthorizationConfigFile() {
-					return nil
-				}
-
-				if cfgProvider.Cluster().APIServer().AuthorizationConfig() == nil {
-					res.TypedSpec().Config = v1alpha1.APIServerDefaultAuthorizationConfigAuthorizers
-
-					return nil
-				}
-
-				var authorizers []k8s.AuthorizationAuthorizersSpec
-
-				for _, authorizer := range cfgProvider.Cluster().APIServer().AuthorizationConfig() {
-					// skip Node and RBAC authorizers as we add them by default later on.
-					if authorizer.Type() == "Node" || authorizer.Type() == "RBAC" {
-						continue
-					}
-
-					authorizers = slices.Concat(authorizers, []k8s.AuthorizationAuthorizersSpec{
-						{
-							Type:    authorizer.Type(),
-							Name:    authorizer.Name(),
-							Webhook: authorizer.Webhook(),
-						},
-					})
-				}
-
-				res.TypedSpec().Config = slices.Concat(v1alpha1.APIServerDefaultAuthorizationConfigAuthorizers, authorizers)
 
 				return nil
 			},

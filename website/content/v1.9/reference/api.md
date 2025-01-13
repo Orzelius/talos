@@ -55,14 +55,6 @@ description: Talos gRPC API reference.
     - [MemberSpec](#talos.resource.definitions.cluster.MemberSpec)
   
 - [resource/definitions/cri/cri.proto](#resource/definitions/cri/cri.proto)
-    - [ImageCacheConfigSpec](#talos.resource.definitions.cri.ImageCacheConfigSpec)
-    - [RegistriesConfigSpec](#talos.resource.definitions.cri.RegistriesConfigSpec)
-    - [RegistriesConfigSpec.RegistryConfigEntry](#talos.resource.definitions.cri.RegistriesConfigSpec.RegistryConfigEntry)
-    - [RegistriesConfigSpec.RegistryMirrorsEntry](#talos.resource.definitions.cri.RegistriesConfigSpec.RegistryMirrorsEntry)
-    - [RegistryAuthConfig](#talos.resource.definitions.cri.RegistryAuthConfig)
-    - [RegistryConfig](#talos.resource.definitions.cri.RegistryConfig)
-    - [RegistryMirrorConfig](#talos.resource.definitions.cri.RegistryMirrorConfig)
-    - [RegistryTLSConfig](#talos.resource.definitions.cri.RegistryTLSConfig)
     - [SeccompProfileSpec](#talos.resource.definitions.cri.SeccompProfileSpec)
   
 - [resource/definitions/enums/enums.proto](#resource/definitions/enums/enums.proto)
@@ -71,15 +63,12 @@ description: Talos gRPC API reference.
     - [BlockFilesystemType](#talos.resource.definitions.enums.BlockFilesystemType)
     - [BlockVolumePhase](#talos.resource.definitions.enums.BlockVolumePhase)
     - [BlockVolumeType](#talos.resource.definitions.enums.BlockVolumeType)
-    - [CriImageCacheCopyStatus](#talos.resource.definitions.enums.CriImageCacheCopyStatus)
-    - [CriImageCacheStatus](#talos.resource.definitions.enums.CriImageCacheStatus)
     - [KubespanPeerState](#talos.resource.definitions.enums.KubespanPeerState)
     - [MachineType](#talos.resource.definitions.enums.MachineType)
     - [NethelpersADSelect](#talos.resource.definitions.enums.NethelpersADSelect)
     - [NethelpersARPAllTargets](#talos.resource.definitions.enums.NethelpersARPAllTargets)
     - [NethelpersARPValidate](#talos.resource.definitions.enums.NethelpersARPValidate)
     - [NethelpersAddressFlag](#talos.resource.definitions.enums.NethelpersAddressFlag)
-    - [NethelpersAddressSortAlgorithm](#talos.resource.definitions.enums.NethelpersAddressSortAlgorithm)
     - [NethelpersBondMode](#talos.resource.definitions.enums.NethelpersBondMode)
     - [NethelpersBondXmitHashPolicy](#talos.resource.definitions.enums.NethelpersBondXmitHashPolicy)
     - [NethelpersConntrackState](#talos.resource.definitions.enums.NethelpersConntrackState)
@@ -137,8 +126,6 @@ description: Talos gRPC API reference.
     - [AdmissionControlConfigSpec](#talos.resource.definitions.k8s.AdmissionControlConfigSpec)
     - [AdmissionPluginSpec](#talos.resource.definitions.k8s.AdmissionPluginSpec)
     - [AuditPolicyConfigSpec](#talos.resource.definitions.k8s.AuditPolicyConfigSpec)
-    - [AuthorizationAuthorizersSpec](#talos.resource.definitions.k8s.AuthorizationAuthorizersSpec)
-    - [AuthorizationConfigSpec](#talos.resource.definitions.k8s.AuthorizationConfigSpec)
     - [BootstrapManifestsConfigSpec](#talos.resource.definitions.k8s.BootstrapManifestsConfigSpec)
     - [ConfigStatusSpec](#talos.resource.definitions.k8s.ConfigStatusSpec)
     - [ControllerManagerConfigSpec](#talos.resource.definitions.k8s.ControllerManagerConfigSpec)
@@ -218,7 +205,6 @@ description: Talos gRPC API reference.
     - [NfTablesPortMatch](#talos.resource.definitions.network.NfTablesPortMatch)
     - [NfTablesRule](#talos.resource.definitions.network.NfTablesRule)
     - [NodeAddressFilterSpec](#talos.resource.definitions.network.NodeAddressFilterSpec)
-    - [NodeAddressSortAlgorithmSpec](#talos.resource.definitions.network.NodeAddressSortAlgorithmSpec)
     - [NodeAddressSpec](#talos.resource.definitions.network.NodeAddressSpec)
     - [OperatorSpecSpec](#talos.resource.definitions.network.OperatorSpecSpec)
     - [PortRange](#talos.resource.definitions.network.PortRange)
@@ -507,15 +493,10 @@ description: Talos gRPC API reference.
     - [SecurityService](#securityapi.SecurityService)
   
 - [storage/storage.proto](#storage/storage.proto)
-    - [BlockDeviceWipe](#storage.BlockDeviceWipe)
-    - [BlockDeviceWipeDescriptor](#storage.BlockDeviceWipeDescriptor)
-    - [BlockDeviceWipeRequest](#storage.BlockDeviceWipeRequest)
-    - [BlockDeviceWipeResponse](#storage.BlockDeviceWipeResponse)
     - [Disk](#storage.Disk)
     - [Disks](#storage.Disks)
     - [DisksResponse](#storage.DisksResponse)
   
-    - [BlockDeviceWipeDescriptor.Method](#storage.BlockDeviceWipeDescriptor.Method)
     - [Disk.DiskType](#storage.Disk.DiskType)
   
     - [StorageService](#storage.StorageService)
@@ -1018,7 +999,6 @@ MountSpec is the spec for volume mount.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | target_path | [string](#string) |  |  |
-| selinux_label | [string](#string) |  |  |
 
 
 
@@ -1134,7 +1114,6 @@ VolumeStatusSpec is the spec for VolumeStatus resource.
 | mount_location | [string](#string) |  |  |
 | encryption_provider | [talos.resource.definitions.enums.BlockEncryptionProviderType](#talos.resource.definitions.enums.BlockEncryptionProviderType) |  |  |
 | pretty_size | [string](#string) |  |  |
-| encryption_failed_syncs | [string](#string) | repeated |  |
 
 
 
@@ -1303,139 +1282,6 @@ MemberSpec describes Member state.
 
 
 
-<a name="talos.resource.definitions.cri.ImageCacheConfigSpec"></a>
-
-### ImageCacheConfigSpec
-ImageCacheConfigSpec represents the ImageCacheConfig.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| status | [talos.resource.definitions.enums.CriImageCacheStatus](#talos.resource.definitions.enums.CriImageCacheStatus) |  |  |
-| roots | [string](#string) | repeated |  |
-| copy_status | [talos.resource.definitions.enums.CriImageCacheCopyStatus](#talos.resource.definitions.enums.CriImageCacheCopyStatus) |  |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.cri.RegistriesConfigSpec"></a>
-
-### RegistriesConfigSpec
-RegistriesConfigSpec describes status of rendered secrets.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| registry_mirrors | [RegistriesConfigSpec.RegistryMirrorsEntry](#talos.resource.definitions.cri.RegistriesConfigSpec.RegistryMirrorsEntry) | repeated |  |
-| registry_config | [RegistriesConfigSpec.RegistryConfigEntry](#talos.resource.definitions.cri.RegistriesConfigSpec.RegistryConfigEntry) | repeated |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.cri.RegistriesConfigSpec.RegistryConfigEntry"></a>
-
-### RegistriesConfigSpec.RegistryConfigEntry
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| key | [string](#string) |  |  |
-| value | [RegistryConfig](#talos.resource.definitions.cri.RegistryConfig) |  |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.cri.RegistriesConfigSpec.RegistryMirrorsEntry"></a>
-
-### RegistriesConfigSpec.RegistryMirrorsEntry
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| key | [string](#string) |  |  |
-| value | [RegistryMirrorConfig](#talos.resource.definitions.cri.RegistryMirrorConfig) |  |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.cri.RegistryAuthConfig"></a>
-
-### RegistryAuthConfig
-RegistryAuthConfig specifies authentication configuration for a registry.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| registry_username | [string](#string) |  |  |
-| registry_password | [string](#string) |  |  |
-| registry_auth | [string](#string) |  |  |
-| registry_identity_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.cri.RegistryConfig"></a>
-
-### RegistryConfig
-RegistryConfig specifies auth & TLS config per registry.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| registry_tls | [RegistryTLSConfig](#talos.resource.definitions.cri.RegistryTLSConfig) |  |  |
-| registry_auth | [RegistryAuthConfig](#talos.resource.definitions.cri.RegistryAuthConfig) |  |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.cri.RegistryMirrorConfig"></a>
-
-### RegistryMirrorConfig
-RegistryMirrorConfig represents mirror configuration for a registry.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| mirror_endpoints | [string](#string) | repeated |  |
-| mirror_override_path | [bool](#bool) |  |  |
-| mirror_skip_fallback | [bool](#bool) |  |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.cri.RegistryTLSConfig"></a>
-
-### RegistryTLSConfig
-RegistryTLSConfig specifies TLS config for HTTPS registries.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| tls_client_identity | [common.PEMEncodedCertificateAndKey](#common.PEMEncodedCertificateAndKey) |  |  |
-| tlsca | [bytes](#bytes) |  |  |
-| tls_insecure_skip_verify | [bool](#bool) |  |  |
-
-
-
-
-
-
 <a name="talos.resource.definitions.cri.SeccompProfileSpec"></a>
 
 ### SeccompProfileSpec
@@ -1542,34 +1388,6 @@ BlockVolumeType describes volume type.
 
 
 
-<a name="talos.resource.definitions.enums.CriImageCacheCopyStatus"></a>
-
-### CriImageCacheCopyStatus
-CriImageCacheCopyStatus describes image cache copy status type.
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| IMAGE_CACHE_COPY_STATUS_UNKNOWN | 0 |  |
-| IMAGE_CACHE_COPY_STATUS_SKIPPED | 1 |  |
-| IMAGE_CACHE_COPY_STATUS_PENDING | 2 |  |
-| IMAGE_CACHE_COPY_STATUS_READY | 3 |  |
-
-
-
-<a name="talos.resource.definitions.enums.CriImageCacheStatus"></a>
-
-### CriImageCacheStatus
-CriImageCacheStatus describes image cache status type.
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| IMAGE_CACHE_STATUS_UNKNOWN | 0 |  |
-| IMAGE_CACHE_STATUS_DISABLED | 1 |  |
-| IMAGE_CACHE_STATUS_PREPARING | 2 |  |
-| IMAGE_CACHE_STATUS_READY | 3 |  |
-
-
-
 <a name="talos.resource.definitions.enums.KubespanPeerState"></a>
 
 ### KubespanPeerState
@@ -1656,18 +1474,6 @@ NethelpersAddressFlag wraps IFF_* constants.
 | ADDRESS_NO_PREFIX_ROUTE | 512 |  |
 | ADDRESS_MC_AUTO_JOIN | 1024 |  |
 | ADDRESS_STABLE_PRIVACY | 2048 |  |
-
-
-
-<a name="talos.resource.definitions.enums.NethelpersAddressSortAlgorithm"></a>
-
-### NethelpersAddressSortAlgorithm
-NethelpersAddressSortAlgorithm is an internal address sorting algorithm.
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| ADDRESS_SORT_ALGORITHM_V1 | 0 |  |
-| ADDRESS_SORT_ALGORITHM_V2 | 1 |  |
 
 
 
@@ -2369,7 +2175,6 @@ EtcFileSpecSpec describes status of rendered secrets.
 | ----- | ---- | ----- | ----------- |
 | contents | [bytes](#bytes) |  |  |
 | mode | [uint32](#uint32) |  |  |
-| selinux_label | [string](#string) |  |  |
 
 
 
@@ -2612,39 +2417,6 @@ AuditPolicyConfigSpec is audit policy configuration for kube-apiserver.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | config | [google.protobuf.Struct](#google.protobuf.Struct) |  |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.k8s.AuthorizationAuthorizersSpec"></a>
-
-### AuthorizationAuthorizersSpec
-AuthorizationAuthorizersSpec is a configuration of authorization authorizers.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| type | [string](#string) |  |  |
-| name | [string](#string) |  |  |
-| webhook | [google.protobuf.Struct](#google.protobuf.Struct) |  |  |
-
-
-
-
-
-
-<a name="talos.resource.definitions.k8s.AuthorizationConfigSpec"></a>
-
-### AuthorizationConfigSpec
-AuthorizationConfigSpec is authorization configuration for kube-apiserver.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| image | [string](#string) |  |  |
-| config | [AuthorizationAuthorizersSpec](#talos.resource.definitions.k8s.AuthorizationAuthorizersSpec) | repeated |  |
 
 
 
@@ -3825,8 +3597,6 @@ LinkStatusSpec describes status of rendered secrets.
 | bond_master | [BondMasterSpec](#talos.resource.definitions.network.BondMasterSpec) |  |  |
 | wireguard | [WireguardSpec](#talos.resource.definitions.network.WireguardSpec) |  |  |
 | permanent_addr | [bytes](#bytes) |  |  |
-| alias | [string](#string) |  |  |
-| alt_names | [string](#string) | repeated |  |
 
 
 
@@ -4031,21 +3801,6 @@ NodeAddressFilterSpec describes a filter for NodeAddresses.
 
 
 
-<a name="talos.resource.definitions.network.NodeAddressSortAlgorithmSpec"></a>
-
-### NodeAddressSortAlgorithmSpec
-NodeAddressSortAlgorithmSpec describes a filter for NodeAddresses.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| algorithm | [talos.resource.definitions.enums.NethelpersAddressSortAlgorithm](#talos.resource.definitions.enums.NethelpersAddressSortAlgorithm) |  |  |
-
-
-
-
-
-
 <a name="talos.resource.definitions.network.NodeAddressSpec"></a>
 
 ### NodeAddressSpec
@@ -4055,7 +3810,6 @@ NodeAddressSpec describes a set of node addresses.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | addresses | [common.NetIPPrefix](#common.NetIPPrefix) | repeated |  |
-| sort_algorithm | [talos.resource.definitions.enums.NethelpersAddressSortAlgorithm](#talos.resource.definitions.enums.NethelpersAddressSortAlgorithm) |  |  |
 
 
 
@@ -4145,7 +3899,6 @@ ResolverSpecSpec describes DNS resolvers.
 | ----- | ---- | ----- | ----------- |
 | dns_servers | [common.NetIP](#common.NetIP) | repeated |  |
 | config_layer | [talos.resource.definitions.enums.NetworkConfigLayer](#talos.resource.definitions.enums.NetworkConfigLayer) |  |  |
-| search_domains | [string](#string) | repeated |  |
 
 
 
@@ -4161,7 +3914,6 @@ ResolverStatusSpec describes DNS resolvers.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | dns_servers | [common.NetIP](#common.NetIP) | repeated |  |
-| search_domains | [string](#string) | repeated |  |
 
 
 
@@ -8736,74 +8488,6 @@ The security service definition.
 
 
 
-<a name="storage.BlockDeviceWipe"></a>
-
-### BlockDeviceWipe
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| metadata | [common.Metadata](#common.Metadata) |  |  |
-
-
-
-
-
-
-<a name="storage.BlockDeviceWipeDescriptor"></a>
-
-### BlockDeviceWipeDescriptor
-BlockDeviceWipeDescriptor represents a single block device to be wiped.
-
-The device can be either a full disk (e.g. vda) or a partition (vda5).
-The device should not be used in any of active volumes.
-The device should not be used as a secondary (e.g. part of LVM).
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| device | [string](#string) |  | Device name to wipe (e.g. sda or sda5).
-
-The name should be submitted without `/dev/` prefix. |
-| method | [BlockDeviceWipeDescriptor.Method](#storage.BlockDeviceWipeDescriptor.Method) |  | Wipe method to use. |
-| skip_volume_check | [bool](#bool) |  | Skip the volume in use check. |
-
-
-
-
-
-
-<a name="storage.BlockDeviceWipeRequest"></a>
-
-### BlockDeviceWipeRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| devices | [BlockDeviceWipeDescriptor](#storage.BlockDeviceWipeDescriptor) | repeated |  |
-
-
-
-
-
-
-<a name="storage.BlockDeviceWipeResponse"></a>
-
-### BlockDeviceWipeResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| messages | [BlockDeviceWipe](#storage.BlockDeviceWipe) | repeated |  |
-
-
-
-
-
-
 <a name="storage.Disk"></a>
 
 ### Disk
@@ -8864,18 +8548,6 @@ DisksResponse represents the response of the `Disks` RPC.
  <!-- end messages -->
 
 
-<a name="storage.BlockDeviceWipeDescriptor.Method"></a>
-
-### BlockDeviceWipeDescriptor.Method
-
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| FAST | 0 | Fast wipe - wipe only filesystem signatures. |
-| ZEROES | 1 | Zeroes wipe - wipe by overwriting with zeroes (might be slow depending on the disk size and available hardware features). |
-
-
-
 <a name="storage.Disk.DiskType"></a>
 
 ### Disk.DiskType
@@ -8904,9 +8576,6 @@ StorageService represents the storage service.
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | Disks | [.google.protobuf.Empty](#google.protobuf.Empty) | [DisksResponse](#storage.DisksResponse) |  |
-| BlockDeviceWipe | [BlockDeviceWipeRequest](#storage.BlockDeviceWipeRequest) | [BlockDeviceWipeResponse](#storage.BlockDeviceWipeResponse) | BlockDeviceWipe performs a wipe of the blockdevice (partition or disk).
-
-The method doesn't require a reboot, and it can only wipe blockdevices which are not being used as volumes at the moment. Wiping of volumes requires a different API. |
 
  <!-- end services -->
 

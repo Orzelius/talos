@@ -23,11 +23,11 @@ import (
 	"github.com/cosi-project/runtime/pkg/resource"
 	"github.com/cosi-project/runtime/pkg/safe"
 	"github.com/cosi-project/runtime/pkg/state"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-retry/retry"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.etcd.io/etcd/etcdutl/v3/snapshot"
+	snapshot "go.etcd.io/etcd/etcdutl/v3/snapshot"
 
 	"github.com/siderolabs/talos/internal/app/machined/pkg/runtime"
 	"github.com/siderolabs/talos/internal/app/machined/pkg/system"
@@ -40,7 +40,6 @@ import (
 	"github.com/siderolabs/talos/internal/pkg/containers/image"
 	"github.com/siderolabs/talos/internal/pkg/environment"
 	"github.com/siderolabs/talos/internal/pkg/etcd"
-	"github.com/siderolabs/talos/internal/pkg/selinux"
 	"github.com/siderolabs/talos/pkg/argsbuilder"
 	"github.com/siderolabs/talos/pkg/conditions"
 	"github.com/siderolabs/talos/pkg/filetree"
@@ -50,7 +49,6 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/meta"
 	"github.com/siderolabs/talos/pkg/machinery/nethelpers"
-	"github.com/siderolabs/talos/pkg/machinery/resources/cri"
 	etcdresource "github.com/siderolabs/talos/pkg/machinery/resources/etcd"
 	"github.com/siderolabs/talos/pkg/machinery/resources/k8s"
 	"github.com/siderolabs/talos/pkg/machinery/resources/network"
@@ -95,11 +93,6 @@ func (e *Etcd) PreFunc(ctx context.Context, r runtime.Runtime) error {
 		return err
 	}
 
-	// Relabel in case of upgrade from older version or SELinux being disabled and then enabled.
-	if err := selinux.SetLabel(constants.EtcdDataPath, constants.EtcdDataSELinuxLabel); err != nil {
-		return err
-	}
-
 	// Make sure etcd user can access files in the data directory.
 	if err := filetree.ChownRecursive(constants.EtcdDataPath, constants.EtcdUserID, constants.EtcdUserID); err != nil {
 		return err
@@ -121,7 +114,7 @@ func (e *Etcd) PreFunc(ctx context.Context, r runtime.Runtime) error {
 		return fmt.Errorf("failed to get etcd spec: %w", err)
 	}
 
-	img, err := image.Pull(containerdctx, cri.RegistryBuilder(r.State().V1Alpha2().Resources()), client, spec.TypedSpec().Image, image.WithSkipIfAlreadyPulled())
+	img, err := image.Pull(containerdctx, r.Config().Machine().Registries(), client, spec.TypedSpec().Image, image.WithSkipIfAlreadyPulled())
 	if err != nil {
 		return fmt.Errorf("failed to pull image %q: %w", spec.TypedSpec().Image, err)
 	}

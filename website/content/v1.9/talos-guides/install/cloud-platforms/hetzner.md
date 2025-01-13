@@ -10,11 +10,10 @@ aliases:
 Hetzner Cloud does not support uploading custom images.
 You can email their support to get a Talos ISO uploaded by following [issues:3599](https://github.com/siderolabs/talos/issues/3599#issuecomment-841172018) or you can prepare image snapshot by yourself.
 
-There are three options to upload your own.
+There are two options to upload your own.
 
 1. Run an instance in rescue mode and replace the system OS with the Talos image
 2. Use [Hashicorp packer](https://www.packer.io/docs/builders/hetzner-cloud) to prepare an image
-3. Use special utility [hcloud-upload-image](https://github.com/apricote/hcloud-upload-image/)
 
 ### Rescue mode
 
@@ -79,7 +78,7 @@ variable "arch" {
 
 variable "server_type" {
   type    = string
-  default = "cx22"
+  default = "cx11"
 }
 
 variable "server_location" {
@@ -145,26 +144,6 @@ export IMAGE_ID=<image-id-in-packer-output>
 ```
 
 After doing this, you can find the snapshot in the console interface.
-
-### hcloud-upload-image
-
-Install process described [here](https://github.com/apricote/hcloud-upload-image/?tab=readme-ov-file#getting-started) (you can download binary or build from source, it is also possible to use Docker).
-
-For process simplification you can use this `bash` script:
-
-```bash
-#!/usr/bin/env bash
-export TALOS_IMAGE_VERSION={{< release >}} # You can change to the current version
-export TALOS_IMAGE_ARCH=amd64 # You can change to arm architecture
-export HCLOUD_SERVER_ARCH=x86 # HCloud server architecture can be x86 or arm
-wget https://factory.talos.dev/image/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/${TALOS_IMAGE_VERSION}/hcloud-${TALOS_IMAGE_ARCH}.raw.xz
-hcloud-upload-image upload \
-      --image-path *.xz \
-      --architecture $HCLOUD_SERVER_ARCH \
-      --compression xz
-```
-
-After these actions, you can find the snapshot in the console interface.
 
 ## Creating a Cluster via the CLI
 
@@ -238,19 +217,19 @@ export IMAGE_ID=<your-image-id>
 
 hcloud server create --name talos-control-plane-1 \
     --image ${IMAGE_ID} \
-    --type cx22 --location hel1 \
+    --type cx21 --location hel1 \
     --label 'type=controlplane' \
     --user-data-from-file controlplane.yaml
 
 hcloud server create --name talos-control-plane-2 \
     --image ${IMAGE_ID} \
-    --type cx22 --location fsn1 \
+    --type cx21 --location fsn1 \
     --label 'type=controlplane' \
     --user-data-from-file controlplane.yaml
 
 hcloud server create --name talos-control-plane-3 \
     --image ${IMAGE_ID} \
-    --type cx22 --location nbg1 \
+    --type cx21 --location nbg1 \
     --label 'type=controlplane' \
     --user-data-from-file controlplane.yaml
 ```
@@ -262,7 +241,7 @@ Create the worker nodes with the following command, repeating (and incrementing 
 ```bash
 hcloud server create --name talos-worker-1 \
     --image ${IMAGE_ID} \
-    --type cx22 --location hel1 \
+    --type cx21 --location hel1 \
     --label 'type=worker' \
     --user-data-from-file worker.yaml
 ```
@@ -287,12 +266,6 @@ Bootstrap `etcd` on the first control plane node with:
 
 ```bash
 talosctl --talosconfig talosconfig bootstrap
-```
-
-After a successful bootstrap, you should see that all the members have joined:
-
-```bash
-talosctl --talosconfig talosconfig -n <control-plane-1-IP> get members
 ```
 
 ### Retrieve the `kubeconfig`

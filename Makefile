@@ -17,14 +17,13 @@ ZSTD_COMPRESSION_LEVEL ?= 18
 CI_RELEASE_TAG := $(shell git log --oneline --format=%B -n 1 HEAD^2 -- 2>/dev/null | head -n 1 | sed -r "/^release\(.*\)/ s/^release\((.*)\):.*$$/\\1/; t; Q")
 
 ARTIFACTS := _out
-TOOLS ?= ghcr.io/siderolabs/tools:v1.10.0-alpha.0-3-g0393558
+TOOLS ?= ghcr.io/siderolabs/tools:v1.9.0-alpha.0-9-ge061b6f
 
 DEBUG_TOOLS_SOURCE := scratch
-EMBED_TARGET ?= embed
 
 PKGS_PREFIX ?= ghcr.io/siderolabs
-PKGS ?= v1.10.0-alpha.0-18-ge7eddcf
-EXTRAS ?= v1.9.0
+PKGS ?= v1.9.0-alpha.0-40-g567a14a
+EXTRAS ?= v1.9.0-alpha.0-2-g78ba66b
 
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 CONFORMANCE_IMAGE ?= ghcr.io/siderolabs/conform:latest
@@ -35,7 +34,6 @@ PKG_APPARMOR ?= $(PKGS_PREFIX)/apparmor:$(PKGS)
 PKG_CRYPTSETUP ?= $(PKGS_PREFIX)/cryptsetup:$(PKGS)
 PKG_CONTAINERD ?= $(PKGS_PREFIX)/containerd:$(PKGS)
 PKG_DOSFSTOOLS ?= $(PKGS_PREFIX)/dosfstools:$(PKGS)
-PKG_E2FSPROGS ?= $(PKGS_PREFIX)/e2fsprogs:$(PKGS)
 PKG_SYSTEMD_UDEVD ?= $(PKGS_PREFIX)/systemd-udevd:$(PKGS)
 PKG_LIBCAP ?= $(PKGS_PREFIX)/libcap:$(PKGS)
 PKG_GRUB ?= $(PKGS_PREFIX)/grub:$(PKGS)
@@ -44,8 +42,6 @@ PKG_IPTABLES ?= $(PKGS_PREFIX)/iptables:$(PKGS)
 PKG_IPXE ?= $(PKGS_PREFIX)/ipxe:$(PKGS)
 PKG_LIBINIH ?= $(PKGS_PREFIX)/libinih:$(PKGS)
 PKG_LIBJSON_C ?= $(PKGS_PREFIX)/libjson-c:$(PKGS)
-PKG_LIBMNL ?= $(PKGS_PREFIX)/libmnl:$(PKGS)
-PKG_LIBNFTNL ?= $(PKGS_PREFIX)/libnftnl:$(PKGS)
 PKG_LIBPOPT ?= $(PKGS_PREFIX)/libpopt:$(PKGS)
 PKG_LIBSEPOL ?= $(PKGS_PREFIX)/libsepol:$(PKGS)
 PKG_LIBSELINUX ?= $(PKGS_PREFIX)/libselinux:$(PKGS)
@@ -69,17 +65,17 @@ PKG_TALOSCTL_CNI_BUNDLE_INSTALL ?= $(PKGS_PREFIX)/talosctl-cni-bundle-install:$(
 # renovate: datasource=github-tags depName=golang/go
 GO_VERSION ?= 1.23
 # renovate: datasource=go depName=golang.org/x/tools
-GOIMPORTS_VERSION ?= v0.28.0
+GOIMPORTS_VERSION ?= v0.27.0
 # renovate: datasource=go depName=mvdan.cc/gofumpt
 GOFUMPT_VERSION ?= v0.7.0
 # renovate: datasource=go depName=github.com/golangci/golangci-lint
-GOLANGCILINT_VERSION ?= v1.62.2
+GOLANGCILINT_VERSION ?= v1.62.0
 # renovate: datasource=go depName=golang.org/x/tools
-STRINGER_VERSION ?= v0.28.0
+STRINGER_VERSION ?= v0.27.0
 # renovate: datasource=go depName=github.com/dmarkham/enumer
 ENUMER_VERSION ?= v1.5.10
 # renovate: datasource=go depName=k8s.io/code-generator
-DEEPCOPY_GEN_VERSION ?= v0.32.0
+DEEPCOPY_GEN_VERSION ?= v0.31.2
 # renovate: datasource=go depName=github.com/planetscale/vtprotobuf
 VTPROTOBUF_VERSION ?= v0.6.0
 # renovate: datasource=go depName=github.com/siderolabs/deep-copy
@@ -91,9 +87,9 @@ PROTOTOOL_VERSION ?= v1.10.0
 # renovate: datasource=go depName=github.com/pseudomuto/protoc-gen-doc
 PROTOC_GEN_DOC_VERSION ?= v1.5.1
 # renovate: datasource=npm depName=markdownlint-cli
-MARKDOWNLINTCLI_VERSION ?= 0.43.0
+MARKDOWNLINTCLI_VERSION ?= 0.42.0
 # renovate: datasource=npm depName=textlint
-TEXTLINT_VERSION ?= 14.4.0
+TEXTLINT_VERSION ?= 14.2.1
 # renovate: datasource=npm depName=textlint-filter-rule-comments
 TEXTLINT_FILTER_RULE_COMMENTS_VERSION ?= 1.2.2
 # renovate: datasource=npm depName=textlint-rule-one-sentence-per-line
@@ -108,13 +104,13 @@ INTEGRATION_TEST := integration-test
 INTEGRATION_TEST_DEFAULT_TARGET := $(INTEGRATION_TEST)-$(OPERATING_SYSTEM)
 INTEGRATION_TEST_PROVISION_DEFAULT_TARGET := integration-test-provision-$(OPERATING_SYSTEM)
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-KUBECTL_VERSION ?= v1.32.0
+KUBECTL_VERSION ?= v1.32.0-beta.0
 # renovate: datasource=github-releases depName=kastenhq/kubestr
-KUBESTR_VERSION ?= v0.4.47
+KUBESTR_VERSION ?= v0.4.46
 # renovate: datasource=github-releases depName=helm/helm
-HELM_VERSION ?= v3.16.4
+HELM_VERSION ?= v3.16.2
 # renovate: datasource=github-releases depName=cilium/cilium-cli
-CILIUM_CLI_VERSION ?= v0.16.22
+CILIUM_CLI_VERSION ?= v0.16.20
 # renovate: datasource=github-releases depName=microsoft/secureboot_objects
 MICROSOFT_SECUREBOOT_RELEASE ?= v1.1.3
 
@@ -123,36 +119,11 @@ KUBESTR_URL ?= https://github.com/kastenhq/kubestr/releases/download/$(KUBESTR_V
 HELM_URL ?= https://get.helm.sh/helm-$(HELM_VERSION)-linux-amd64.tar.gz
 CILIUM_CLI_URL ?= https://github.com/cilium/cilium-cli/releases/download/$(CILIUM_CLI_VERSION)/cilium-$(OPERATING_SYSTEM)-amd64.tar.gz
 TESTPKGS ?= github.com/siderolabs/talos/...
-RELEASES ?= v1.8.4 v1.9.0
+RELEASES ?= v1.7.7 v1.8.1
 SHORT_INTEGRATION_TEST ?=
 CUSTOM_CNI_URL ?=
-
 INSTALLER_ARCH ?= all
-INSTALLER_ONLY_PKGS ?= \
-    bash \
-    cpio \
-    efibootmgr \
-    kmod \
-    squashfs-tools \
-    xfsprogs \
-    xz \
-    zstd
-
-IMAGER_EXTRA_PKGS ?= \
-    binutils-aarch64 \
-    binutils-x86_64 \
-    dosfstools \
-    e2fsprogs \
-    mtools \
-    pigz \
-    qemu-img \
-    tar \
-    xorriso
-
-INSTALLER_PKGS ?= $(INSTALLER_ONLY_PKGS) $(IMAGER_EXTRA_PKGS)
 IMAGER_ARGS ?=
-
-MORE_IMAGES ?=
 
 CGO_ENABLED ?= 0
 GO_BUILDFLAGS ?=
@@ -200,7 +171,6 @@ COMMON_ARGS += --build-arg=TOOLS=$(TOOLS)
 COMMON_ARGS += --build-arg=DEBUG_TOOLS_SOURCE=$(DEBUG_TOOLS_SOURCE)
 COMMON_ARGS += --build-arg=PKGS=$(PKGS)
 COMMON_ARGS += --build-arg=EXTRAS=$(EXTRAS)
-COMMON_ARGS += --build-arg=EMBED_TARGET=$(EMBED_TARGET)
 COMMON_ARGS += --build-arg=GOFUMPT_VERSION=$(GOFUMPT_VERSION)
 COMMON_ARGS += --build-arg=GOIMPORTS_VERSION=$(GOIMPORTS_VERSION)
 COMMON_ARGS += --build-arg=STRINGER_VERSION=$(STRINGER_VERSION)
@@ -221,7 +191,6 @@ COMMON_ARGS += --build-arg=SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH)
 COMMON_ARGS += --build-arg=ARTIFACTS=$(ARTIFACTS)
 COMMON_ARGS += --build-arg=TESTPKGS=$(TESTPKGS)
 COMMON_ARGS += --build-arg=INSTALLER_ARCH=$(INSTALLER_ARCH)
-COMMON_ARGS += --build-arg=INSTALLER_PKGS="$(INSTALLER_PKGS)"
 COMMON_ARGS += --build-arg=CGO_ENABLED=$(CGO_ENABLED)
 COMMON_ARGS += --build-arg=GO_BUILDFLAGS="$(GO_BUILDFLAGS)"
 COMMON_ARGS += --build-arg=GO_BUILDFLAGS_TALOSCTL="$(GO_BUILDFLAGS_TALOSCTL)"
@@ -240,7 +209,6 @@ COMMON_ARGS += --build-arg=PKG_APPARMOR=$(PKG_APPARMOR)
 COMMON_ARGS += --build-arg=PKG_CRYPTSETUP=$(PKG_CRYPTSETUP)
 COMMON_ARGS += --build-arg=PKG_CONTAINERD=$(PKG_CONTAINERD)
 COMMON_ARGS += --build-arg=PKG_DOSFSTOOLS=$(PKG_DOSFSTOOLS)
-COMMON_ARGS += --build-arg=PKG_E2FSPROGS=$(PKG_E2FSPROGS)
 COMMON_ARGS += --build-arg=PKG_SYSTEMD_UDEVD=$(PKG_SYSTEMD_UDEVD)
 COMMON_ARGS += --build-arg=PKG_LIBCAP=$(PKG_LIBCAP)
 COMMON_ARGS += --build-arg=PKG_GRUB=$(PKG_GRUB)
@@ -249,8 +217,6 @@ COMMON_ARGS += --build-arg=PKG_IPTABLES=$(PKG_IPTABLES)
 COMMON_ARGS += --build-arg=PKG_IPXE=$(PKG_IPXE)
 COMMON_ARGS += --build-arg=PKG_LIBINIH=$(PKG_LIBINIH)
 COMMON_ARGS += --build-arg=PKG_LIBJSON_C=$(PKG_LIBJSON_C)
-COMMON_ARGS += --build-arg=PKG_LIBMNL=$(PKG_LIBMNL)
-COMMON_ARGS += --build-arg=PKG_LIBNFTNL=$(PKG_LIBNFTNL)
 COMMON_ARGS += --build-arg=PKG_LIBSEPOL=$(PKG_LIBSEPOL)
 COMMON_ARGS += --build-arg=PKG_LIBSELINUX=$(PKG_LIBSELINUX)
 COMMON_ARGS += --build-arg=PKG_PCRE2=$(PKG_PCRE2)
@@ -278,7 +244,7 @@ COMMON_ARGS += --build-arg=MICROSOFT_SECUREBOOT_RELEASE=$(MICROSOFT_SECUREBOOT_R
 
 CI_ARGS ?=
 
-EXTENSIONS_FILTER_COMMAND ?= grep -vE 'tailscale|xen-guest-agent|nvidia|vmtoolsd-guest-agent|metal-agent|cloudflared'
+EXTENSIONS_FILTER_COMMAND ?= grep -vE 'tailscale|xen-guest-agent|nvidia|vmtoolsd-guest-agent|metal-agent'
 
 all: initramfs kernel installer imager talosctl talosctl-image talos
 
@@ -358,7 +324,7 @@ hack-test-%: ## Runs the specified script in ./hack/test with well known environ
 
 .PHONY: generate
 generate: ## Generates code from protobuf service definitions and machinery config.
-	@$(MAKE) local-$@ DEST=./ PLATFORM=linux/amd64 EMBED_TARGET=embed-abbrev
+	@$(MAKE) local-$@ DEST=./ PLATFORM=linux/amd64
 
 .PHONY: docs
 docs: ## Generates the documentation for machine config, and talosctl.
@@ -396,7 +362,7 @@ sd-stub: ## Outputs the systemd-stub to the artifact directory.
 
 .PHONY: installer
 installer: ## Builds the container image for the installer and outputs it to the registry.
-	@INSTALLER_ARCH=targetarch INSTALLER_PKGS="$(INSTALLER_ONLY_PKGS)" \
+	@INSTALLER_ARCH=targetarch  \
 		$(MAKE) registry-$@
 
 .PHONY: imager
@@ -490,12 +456,6 @@ uki-certs: talosctl ## Generate test certificates for SecureBoot/PCR Signing
 	@$(TALOSCTL_EXECUTABLE) gen secureboot uki
 	@$(TALOSCTL_EXECUTABLE) gen secureboot pcr
 	@$(TALOSCTL_EXECUTABLE) gen secureboot database
-
-.PHONY: cache-create
-cache-create: installer imager ## Generate image cache.
-	@( $(TALOSCTL_EXECUTABLE) images default | grep -v 'siderolabs/installer'; echo "$(REGISTRY_AND_USERNAME)/installer:$(IMAGE_TAG)"; echo "$(MORE_IMAGES)" | tr ';' '\n' ) | $(TALOSCTL_EXECUTABLE) images cache-create --image-cache-path=/tmp/cache.tar --images=- --force
-	@crane push /tmp/cache.tar $(REGISTRY_AND_USERNAME)/image-cache:$(IMAGE_TAG)
-	@$(MAKE) image-iso IMAGER_ARGS="--image-cache=$(REGISTRY_AND_USERNAME)/image-cache:$(IMAGE_TAG) --extra-kernel-arg='console=ttyS0'"
 
 # Code Quality
 

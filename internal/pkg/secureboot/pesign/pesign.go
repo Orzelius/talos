@@ -6,11 +6,9 @@
 package pesign
 
 import (
-	"cmp"
 	"crypto"
 	"crypto/x509"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/foxboron/go-uefi/authenticode"
@@ -53,16 +51,5 @@ func (s *Signer) Sign(input, output string) error {
 		return fmt.Errorf("error signing binary: %w", err)
 	}
 
-	f, err := os.OpenFile(output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
-		return fmt.Errorf("error opening output file: %w", err)
-	}
-
-	closer := f.Close
-
-	defer closer() //nolint:errcheck
-
-	_, err = io.Copy(f, pecoff.Open())
-
-	return cmp.Or(err, closer())
+	return os.WriteFile(output, pecoff.Bytes(), 0o600)
 }

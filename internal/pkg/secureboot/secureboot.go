@@ -14,39 +14,21 @@ const (
 	OSRel   Section = ".osrel"
 	CMDLine Section = ".cmdline"
 	Initrd  Section = ".initrd"
-	Ucode   Section = ".ucode"
 	Splash  Section = ".splash"
 	DTB     Section = ".dtb"
 	Uname   Section = ".uname"
 	SBAT    Section = ".sbat"
 	PCRSig  Section = ".pcrsig"
 	PCRPKey Section = ".pcrpkey"
-	Profile Section = ".profile"
-	DTBAuto Section = ".dtbauto"
-	HWIDS   Section = ".hwids"
 )
 
 // OrderedSections returns the sections that are measured into PCR.
 //
-// Derived from https://github.com/systemd/systemd/blob/v257.1/src/fundamental/uki.h#L6
+// Derived from https://github.com/systemd/systemd/blob/main/src/fundamental/tpm-pcr.h#L23-L36
 // .pcrsig section is omitted here since that's what we are calulating here.
 func OrderedSections() []Section {
 	// DO NOT REARRANGE
-	return []Section{
-		Linux,
-		OSRel,
-		CMDLine,
-		Initrd,
-		Ucode,
-		Splash,
-		DTB,
-		Uname,
-		SBAT,
-		PCRPKey,
-		Profile,
-		DTBAuto,
-		HWIDS,
-	}
+	return []Section{Linux, OSRel, CMDLine, Initrd, Splash, DTB, Uname, SBAT, PCRPKey}
 }
 
 // Phase is the phase value extended to the PCR.

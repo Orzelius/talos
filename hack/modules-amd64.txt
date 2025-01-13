@@ -26,11 +26,14 @@ kernel/drivers/edac/igen6_edac.ko
 kernel/drivers/edac/sb_edac.ko
 kernel/drivers/edac/skx_edac.ko
 kernel/drivers/edac/x38_edac.ko
+kernel/drivers/gpu/drm/amd/amdgpu/amdgpu.ko
+kernel/drivers/gpu/drm/amd/amdxcp/amdxcp.ko
 kernel/drivers/gpu/drm/display/drm_display_helper.ko
 kernel/drivers/gpu/drm/drm_buddy.ko
 kernel/drivers/gpu/drm/drm_exec.ko
 kernel/drivers/gpu/drm/drm_suballoc_helper.ko
 kernel/drivers/gpu/drm/drm_ttm_helper.ko
+kernel/drivers/gpu/drm/i915/i915.ko
 kernel/drivers/gpu/drm/scheduler/gpu-sched.ko
 kernel/drivers/gpu/drm/ttm/ttm.ko
 kernel/drivers/hid/hid-a4tech.ko
@@ -105,8 +108,6 @@ kernel/drivers/net/ethernet/intel/igbvf/igbvf.ko
 kernel/drivers/net/ethernet/intel/igc/igc.ko
 kernel/drivers/net/ethernet/intel/ixgbe/ixgbe.ko
 kernel/drivers/net/ethernet/intel/ixgbevf/ixgbevf.ko
-kernel/drivers/net/ethernet/intel/libeth/libeth.ko
-kernel/drivers/net/ethernet/intel/libie/libie.ko
 kernel/drivers/net/ethernet/marvell/sky2.ko
 kernel/drivers/net/ethernet/mellanox/mlx4/mlx4_core.ko
 kernel/drivers/net/ethernet/mellanox/mlx4/mlx4_en.ko
@@ -130,7 +131,6 @@ kernel/drivers/net/mii.ko
 kernel/drivers/net/usb/r8152.ko
 kernel/drivers/net/vmxnet3/vmxnet3.ko
 kernel/drivers/net/vrf.ko
-kernel/drivers/nvme/common/nvme-auth.ko
 kernel/drivers/nvme/host/nvme-rdma.ko
 kernel/drivers/nvme/host/nvme.ko
 kernel/drivers/nvme/target/nvme-loop.ko

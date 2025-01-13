@@ -127,7 +127,7 @@ $ kubectl --namespace rook-ceph get cephclusters.ceph.rook.io
 NAME        DATADIRHOSTPATH   MONCOUNT   AGE   PHASE         MESSAGE                   HEALTH        EXTERNAL
 rook-ceph   /var/lib/rook     3          99m   Progressing   Configuring Ceph Mgr(s)   HEALTH_WARN
 
-$ kubectl --namespace rook-ceph wait --timeout=1800s --for=jsonpath='{.status.ceph.health}=HEALTH_OK' cephclusters.ceph.rook.io rook-ceph
+$ kubectl --namespace rook-ceph wait --timeout=1800s --for=jsonpath='{.status.ceph.health}=HEALTH_OK' rook-ceph
 cephcluster.ceph.rook.io/rook-ceph condition met
 ```
 
@@ -283,6 +283,6 @@ pod/disk-wipe created
 $ kubectl wait --timeout=900s --for=jsonpath='{.status.phase}=Succeeded' pod disk-wipe
 pod/disk-wipe condition met
 
-$ kubectl delete pod disk-wipe
+$ kubectl delete pod disk-clean
 pod "disk-wipe" deleted
 ```

@@ -27,7 +27,6 @@ import (
 	efiles "github.com/siderolabs/talos/internal/app/machined/pkg/controllers/files"
 	"github.com/siderolabs/talos/internal/app/machined/pkg/runtime"
 	talosconfig "github.com/siderolabs/talos/pkg/machinery/config"
-	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/resources/config"
 	"github.com/siderolabs/talos/pkg/machinery/resources/files"
 	"github.com/siderolabs/talos/pkg/machinery/resources/network"
@@ -140,16 +139,17 @@ func (ctrl *EtcFileController) Run(ctx context.Context, r controller.Runtime, _ 
 			}
 		}
 
+		var hostnameStatusSpec *network.HostnameStatusSpec
+		if hostnameStatus != nil {
+			hostnameStatusSpec = hostnameStatus.TypedSpec()
+		}
+
 		if resolverStatus != nil && hostDNSCfg != nil && !ctrl.V1Alpha1Mode.InContainer() {
 			// in container mode, keep the original resolv.conf to use the resolvers supplied by the container runtime
 			if err = safe.WriterModify(ctx, r, files.NewEtcFileSpec(files.NamespaceName, "resolv.conf"),
 				func(r *files.EtcFileSpec) error {
-					r.TypedSpec().Contents = renderResolvConf(
-						pickNameservers(hostDNSCfg, resolverStatus),
-						resolverStatus.TypedSpec().SearchDomains,
-					)
+					r.TypedSpec().Contents = renderResolvConf(pickNameservers(hostDNSCfg, resolverStatus), hostnameStatusSpec, cfgProvider)
 					r.TypedSpec().Mode = 0o644
-					r.TypedSpec().SelinuxLabel = constants.EtcSelinuxLabel
 
 					return nil
 				}); err != nil {
@@ -167,13 +167,13 @@ func (ctrl *EtcFileController) Run(ctx context.Context, r controller.Runtime, _ 
 				dnsServers = resolverStatus.TypedSpec().DNSServers
 			}
 
-			conf := renderResolvConf(slices.All(dnsServers), resolverStatus.TypedSpec().SearchDomains)
+			conf := renderResolvConf(slices.All(dnsServers), hostnameStatusSpec, cfgProvider)
 
 			if err = os.MkdirAll(filepath.Dir(ctrl.PodResolvConfPath), 0o755); err != nil {
 				return fmt.Errorf("error creating pod resolv.conf dir: %w", err)
 			}
 
-			err = efiles.UpdateFile(ctrl.PodResolvConfPath, conf, 0o644, constants.EtcSelinuxLabel)
+			err = efiles.UpdateFile(ctrl.PodResolvConfPath, conf, 0o644)
 			if err != nil {
 				return fmt.Errorf("error writing pod resolv.conf: %w", err)
 			}
@@ -184,7 +184,6 @@ func (ctrl *EtcFileController) Run(ctx context.Context, r controller.Runtime, _ 
 				func(r *files.EtcFileSpec) error {
 					r.TypedSpec().Contents, err = ctrl.renderHosts(hostnameStatus.TypedSpec(), nodeAddressStatus.TypedSpec(), cfgProvider)
 					r.TypedSpec().Mode = 0o644
-					r.TypedSpec().SelinuxLabel = constants.EtcSelinuxLabel
 
 					return err
 				}); err != nil {
@@ -207,7 +206,7 @@ func pickNameservers(hostDNSCfg *network.HostDNSConfig, resolverStatus *network.
 	return slices.All(resolverStatus.TypedSpec().DNSServers)
 }
 
-func renderResolvConf(nameservers iter.Seq2[int, netip.Addr], searchDomains []string) []byte {
+func renderResolvConf(nameservers iter.Seq2[int, netip.Addr], hostnameStatus *network.HostnameStatusSpec, cfgProvider talosconfig.Config) []byte {
 	var buf bytes.Buffer
 
 	for i, ns := range nameservers {
@@ -219,8 +218,13 @@ func renderResolvConf(nameservers iter.Seq2[int, netip.Addr], searchDomains []st
 		fmt.Fprintf(&buf, "nameserver %s\n", ns)
 	}
 
-	if len(searchDomains) > 0 {
-		fmt.Fprintf(&buf, "\nsearch %s\n", strings.Join(searchDomains, " "))
+	var disableSearchDomain bool
+	if cfgProvider != nil && cfgProvider.Machine() != nil {
+		disableSearchDomain = cfgProvider.Machine().Network().DisableSearchDomain()
+	}
+
+	if !disableSearchDomain && hostnameStatus != nil && hostnameStatus.Domainname != "" {
+		fmt.Fprintf(&buf, "\nsearch %s\n", hostnameStatus.Domainname)
 	}
 
 	return buf.Bytes()

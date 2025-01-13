@@ -21,7 +21,6 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-multierror"
-	"github.com/siderolabs/gen/xslices"
 
 	"github.com/siderolabs/talos/pkg/machinery/config/machine"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
@@ -33,10 +32,10 @@ type portMap struct {
 	portBindings nat.PortMap
 }
 
-func (p *provisioner) createNodes(
+func (p *DockerProvisioner) createNodes(
 	ctx context.Context,
-	clusterReq provision.ClusterRequest,
-	nodeReqs []provision.NodeRequest,
+	clusterReq ClusterRequest,
+	nodeReqs []NodeRequest,
 	options *provision.Options,
 	isControlplane bool,
 ) ([]provision.NodeInfo, error) {
@@ -44,7 +43,7 @@ func (p *provisioner) createNodes(
 	nodeCh := make(chan provision.NodeInfo, len(nodeReqs))
 
 	for i, nodeReq := range nodeReqs {
-		go func(i int, nodeReq provision.NodeRequest) {
+		go func(i int, nodeReq NodeRequest) {
 			if i == 0 && isControlplane {
 				hostPrefix := ""
 
@@ -89,7 +88,7 @@ func (p *provisioner) createNodes(
 }
 
 //nolint:gocyclo
-func (p *provisioner) createNode(ctx context.Context, clusterReq provision.ClusterRequest, nodeReq provision.NodeRequest, options *provision.Options) (provision.NodeInfo, error) {
+func (p *DockerProvisioner) createNode(ctx context.Context, clusterReq ClusterRequest, nodeReq NodeRequest, options *provision.Options) (provision.NodeInfo, error) {
 	env := []string{
 		"PLATFORM=container",
 		fmt.Sprintf("TALOSSKU=%dCPU-%dRAM", nodeReq.NanoCPUs/(1000*1000*1000), nodeReq.Memory/(1024*1024)),
@@ -126,12 +125,7 @@ func (p *provisioner) createNode(ctx context.Context, clusterReq provision.Clust
 		})
 	}
 
-	for _, path := range append(
-		[]string{constants.EphemeralMountPoint, constants.StateMountPoint},
-		xslices.Map(constants.Overlays, func(overlay constants.SELinuxLabeledPath) string {
-			return overlay.Path
-		})...,
-	) {
+	for _, path := range append([]string{constants.EphemeralMountPoint, constants.StateMountPoint}, constants.Overlays...) {
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeVolume,
 			Target: path,
@@ -243,7 +237,7 @@ func (p *provisioner) createNode(ctx context.Context, clusterReq provision.Clust
 	return nodeInfo, nil
 }
 
-func (p *provisioner) listNodes(ctx context.Context, clusterName string) ([]types.Container, error) {
+func (p *DockerProvisioner) listNodes(ctx context.Context, clusterName string) ([]types.Container, error) {
 	filters := filters.NewArgs()
 	filters.Add("label", "talos.owned=true")
 	filters.Add("label", "talos.cluster.name="+clusterName)
@@ -251,7 +245,7 @@ func (p *provisioner) listNodes(ctx context.Context, clusterName string) ([]type
 	return p.client.ContainerList(ctx, container.ListOptions{All: true, Filters: filters})
 }
 
-func (p *provisioner) destroyNodes(ctx context.Context, clusterName string, options *provision.Options) error {
+func (p *DockerProvisioner) destroyNodes(ctx context.Context, clusterName string, options *provision.Options) error {
 	containers, err := p.listNodes(ctx, clusterName)
 	if err != nil {
 		return err

@@ -16,7 +16,7 @@ import (
 	"github.com/google/cel-go/common/ast"
 	"github.com/google/cel-go/common/operators"
 	"github.com/google/cel-go/common/types"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/siderolabs/crypto/x509"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-blockdevice/v2/encryption"
@@ -102,11 +102,6 @@ func (m *MachineConfig) NodeAnnotations() config.NodeAnnotations {
 // NodeTaints implements the config.Provider interface.
 func (m *MachineConfig) NodeTaints() config.NodeTaints {
 	return m.MachineNodeTaints
-}
-
-// BaseRuntimeSpecOverrides implements the config.Provider interface.
-func (m *MachineConfig) BaseRuntimeSpecOverrides() map[string]any {
-	return m.MachineBaseRuntimeSpecOverrides.Object
 }
 
 // Cluster implements the config.Provider interface.
@@ -608,11 +603,6 @@ func (n *NetworkConfig) Resolvers() []string {
 	return n.NameServers
 }
 
-// SearchDomains implements the config.Provider interface.
-func (n *NetworkConfig) SearchDomains() []string {
-	return n.Searches
-}
-
 // ExtraHosts implements the config.Provider interface.
 func (n *NetworkConfig) ExtraHosts() []config.ExtraHost {
 	return xslices.Map(n.ExtraHostEntries, func(e *ExtraHost) config.ExtraHost { return e })
@@ -859,11 +849,6 @@ func (s *NetworkDeviceSelector) Bus() string {
 // HardwareAddress implements config.NetworkDeviceSelector interface.
 func (s *NetworkDeviceSelector) HardwareAddress() string {
 	return s.NetworkDeviceHardwareAddress
-}
-
-// PermanentAddress implements config.NetworkDeviceSelector interface.
-func (s *NetworkDeviceSelector) PermanentAddress() string {
-	return s.NetworkDevicePermanentAddress
 }
 
 // PCIID implements config.NetworkDeviceSelector interface.
@@ -1327,20 +1312,6 @@ func (i *InstallConfig) DiskMatchExpression() (*cel.Expression, error) {
 		exprs = append(exprs, patternMatcherExpr(selector.Modalias, "modalias"))
 	}
 
-	// disk.transport != "" (otherwise it might select e.g. DM devices)
-	exprs = append(exprs,
-		builder.NewCall(
-			builder.NextID(),
-			operators.NotEquals,
-			builder.NewSelect(
-				builder.NextID(),
-				builder.NewIdent(builder.NextID(), "disk"),
-				"transport",
-			),
-			builder.NewLiteral(builder.NextID(), types.String("")),
-		),
-	)
-
 	if selector.Type != "" {
 		switch selector.Type {
 		case "nvme": // disk.transport == "nvme"
@@ -1353,8 +1324,18 @@ func (i *InstallConfig) DiskMatchExpression() (*cel.Expression, error) {
 				builder.NewIdent(builder.NextID(), "disk"),
 				"rotational",
 			))
-		case "ssd": // !disk.rotational
+		case "ssd": // disk.transport != "" && !disk.rotational
 			exprs = append(exprs,
+				builder.NewCall(
+					builder.NextID(),
+					operators.NotEquals,
+					builder.NewSelect(
+						builder.NextID(),
+						builder.NewIdent(builder.NextID(), "disk"),
+						"transport",
+					),
+					builder.NewLiteral(builder.NextID(), types.String("")),
+				),
 				builder.NewCall(
 					builder.NextID(),
 					operators.LogicalNot,
@@ -1371,7 +1352,7 @@ func (i *InstallConfig) DiskMatchExpression() (*cel.Expression, error) {
 	}
 
 	if selector.BusPath != "" {
-		exprs = append(exprs, patternMatcherExpr(selector.BusPath, "bus_path"))
+		exprs = append(exprs, patternMatcherExpr(selector.BusPath, "buspath"))
 	}
 
 	// exclude readonly disks: !disk.readonly

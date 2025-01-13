@@ -21,7 +21,6 @@ import (
 	"github.com/siderolabs/talos/internal/app/machined/pkg/runtime/v1alpha1/platform/internal/netutils"
 	"github.com/siderolabs/talos/pkg/download"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
-	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/nethelpers"
 	"github.com/siderolabs/talos/pkg/machinery/resources/network"
 	runtimeres "github.com/siderolabs/talos/pkg/machinery/resources/runtime"
@@ -257,7 +256,7 @@ func (d *DigitalOcean) Mode() runtime.Mode {
 }
 
 // KernelArgs implements the runtime.Platform interface.
-func (d *DigitalOcean) KernelArgs(string, quirks.Quirks) procfs.Parameters {
+func (d *DigitalOcean) KernelArgs(string) procfs.Parameters {
 	return []*procfs.Parameter{
 		procfs.NewParameter("console").Append("ttyS0").Append("tty0").Append("tty1"),
 		procfs.NewParameter(constants.KernelParamNetIfnames).Append("0"),

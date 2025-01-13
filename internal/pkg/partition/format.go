@@ -46,8 +46,6 @@ func Format(devname string, t *FormatOptions, printf func(string, ...any)) error
 		return makefs.VFAT(devname, opts...)
 	case FilesystemTypeXFS:
 		return makefs.XFS(devname, opts...)
-	case FileSystemTypeExt4:
-		return makefs.Ext4(devname, opts...)
 	default:
 		return fmt.Errorf("unsupported filesystem type: %q", t.FileSystemType)
 	}
@@ -100,11 +98,6 @@ func systemPartitionsFormatOptions(label string) *FormatOptions {
 		return &FormatOptions{
 			Label:          constants.EphemeralPartitionLabel,
 			FileSystemType: FilesystemTypeNone,
-		}
-	case constants.ImageCachePartitionLabel:
-		return &FormatOptions{
-			Label:          constants.ImageCachePartitionLabel,
-			FileSystemType: FileSystemTypeExt4,
 		}
 	default:
 		return nil

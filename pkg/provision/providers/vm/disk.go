@@ -8,9 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"syscall"
 
-	"github.com/siderolabs/talos/pkg/provision"
+	"github.com/detailyang/go-fallocate"
 )
 
 // UserDiskName returns disk device path.
@@ -23,14 +22,11 @@ func (p *Provisioner) UserDiskName(index int) string {
 }
 
 // CreateDisks creates empty disk files for each disk.
-func (p *Provisioner) CreateDisks(state *State, nodeReq provision.NodeRequest) (diskPaths []string, err error) {
-	const QEMUAlignment = 4 * 1024 * 1024 // 4 MiB, required by QEMU
-
+func (p *Provisioner) CreateDisks(state *State, nodeReq NodeRequest) (diskPaths []string, err error) {
 	diskPaths = make([]string, len(nodeReq.Disks))
 
 	for i, disk := range nodeReq.Disks {
 		diskPath := state.GetRelativePath(fmt.Sprintf("%s-%d.disk", nodeReq.Name, i))
-		diskSize := (disk.Size + QEMUAlignment - 1) / QEMUAlignment * QEMUAlignment
 
 		var diskF *os.File
 
@@ -41,13 +37,13 @@ func (p *Provisioner) CreateDisks(state *State, nodeReq provision.NodeRequest) (
 
 		defer diskF.Close() //nolint:errcheck
 
-		if err = diskF.Truncate(int64(diskSize)); err != nil {
+		if err = diskF.Truncate(int64(disk.Size)); err != nil {
 			return nil, err
 		}
 
 		if !disk.SkipPreallocate {
-			if err = syscall.Fallocate(int(diskF.Fd()), 0, 0, int64(diskSize)); err != nil {
-				fmt.Fprintf(os.Stderr, "WARNING: failed to preallocate disk space for %q (size %d): %s", diskPath, diskSize, err)
+			if err = fallocate.Fallocate(diskF, 0, int64(disk.Size)); err != nil {
+				fmt.Fprintf(os.Stderr, "WARNING: failed to preallocate disk space for %q (size %d): %s", diskPath, disk.Size, err)
 			}
 		}
 

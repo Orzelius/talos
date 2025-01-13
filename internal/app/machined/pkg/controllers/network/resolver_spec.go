@@ -86,15 +86,10 @@ func (ctrl *ResolverSpecController) Run(ctx context.Context, r controller.Runtim
 					return fmt.Errorf("error removing finalizer: %w", err)
 				}
 			case resource.PhaseRunning:
-				logger.Info(
-					"setting resolvers",
-					zap.Stringers("resolvers", spec.TypedSpec().DNSServers),
-					zap.Strings("searchDomains", spec.TypedSpec().SearchDomains),
-				)
+				logger.Info("setting resolvers", zap.Stringers("resolvers", spec.TypedSpec().DNSServers))
 
 				if err = safe.WriterModify(ctx, r, network.NewResolverStatus(network.NamespaceName, spec.Metadata().ID()), func(r *network.ResolverStatus) error {
 					r.TypedSpec().DNSServers = spec.TypedSpec().DNSServers
-					r.TypedSpec().SearchDomains = spec.TypedSpec().SearchDomains
 
 					return nil
 				}); err != nil {

@@ -7,10 +7,9 @@
 package cli
 
 import (
+	"fmt"
 	"os"
-	"os/exec"
 	"regexp"
-	"slices"
 	"strings"
 	"testing"
 
@@ -40,79 +39,67 @@ func (suite *ListSuite) TestSuccess() {
 }
 
 // TestDepth tests various combinations of --recurse and --depth flags.
-//
-//nolint:tparallel
 func (suite *ListSuite) TestDepth() {
+	suite.T().Parallel()
+
 	node := suite.RandomDiscoveredNodeInternalIP(machine.TypeControlPlane)
 
-	// Expected maximum number of separators in the output
-	// In plain terms, it's the maximum depth of the directory tree
-	maxSeps := 5
+	// checks that enough separators are encountered in the output
+	runAndCheck := func(t *testing.T, expectedSeparators int, flags ...string) {
+		args := append([]string{"list", "--nodes", node, "/system"}, flags...)
+		stdout, _ := suite.RunCLI(args)
 
-	if stdout, _ := suite.RunCLI(imageCacheQuery); strings.Contains(stdout, "ready") {
-		// Image cache paths parts are longer
-		maxSeps = 8
+		lines := strings.Split(strings.TrimSpace(stdout), "\n")
+		assert.Greater(t, len(lines), 2)
+		assert.Equal(t, []string{"NODE", "NAME"}, strings.Fields(lines[0]))
+		assert.Equal(t, []string{"."}, strings.Fields(lines[1])[1:])
+
+		var maxActualSeparators int
+
+		for _, line := range lines[2:] {
+			actualSeparators := strings.Count(strings.Fields(line)[1], string(os.PathSeparator))
+
+			msg := fmt.Sprintf(
+				"too many separators (actualSeparators = %d, expectedSeparators = %d)\nflags: %s\nlines:\n%s",
+				actualSeparators, expectedSeparators, strings.Join(flags, " "), strings.Join(lines, "\n"),
+			)
+			if !assert.LessOrEqual(t, actualSeparators, expectedSeparators, msg) {
+				return
+			}
+
+			if maxActualSeparators < actualSeparators {
+				maxActualSeparators = actualSeparators
+			}
+		}
+
+		msg := fmt.Sprintf(
+			"not enough separators (maxActualSeparators = %d, expectedSeparators = %d)\nflags: %s\nlines:\n%s",
+			maxActualSeparators, expectedSeparators, strings.Join(flags, " "), strings.Join(lines, "\n"),
+		)
+		assert.Equal(t, maxActualSeparators, expectedSeparators, msg)
 	}
 
-	// checks that enough separators are encountered in the output
 	for _, test := range []struct {
 		separators int
 		flags      []string
 	}{
 		{separators: 0},
+
 		{separators: 0, flags: []string{"--recurse=false"}},
+
 		{separators: 0, flags: []string{"--depth=-1"}},
 		{separators: 0, flags: []string{"--depth=0"}},
 		{separators: 0, flags: []string{"--depth=1"}},
 		{separators: 1, flags: []string{"--depth=2"}},
 		{separators: 2, flags: []string{"--depth=3"}},
-		{separators: maxSeps, flags: []string{"--recurse=true"}},
+
+		{separators: 5, flags: []string{"--recurse=true"}},
 	} {
-		cmdFn := suite.MakeCMDFn(slices.Insert(test.flags, 0, "list", "--nodes", node, "/system"))
-
-		suite.T().Run(strings.Join(test.flags, ","), func(t *testing.T) {
-			t.Parallel()
-
-			runAndCheck(t, test.separators, cmdFn, test.flags...)
+		suite.Run(strings.Join(test.flags, ","), func() {
+			suite.T().Parallel()
+			runAndCheck(suite.T(), test.separators, test.flags...)
 		})
 	}
-}
-
-func runAndCheck(t *testing.T, expectedSeparators int, cmdFn func() *exec.Cmd, flags ...string) {
-	stdout, _ := base.RunCLI(t, cmdFn)
-
-	lines := strings.Split(strings.TrimSpace(stdout), "\n")
-	assert.Greater(t, len(lines), 2)
-	assert.Equal(t, []string{"NODE", "NAME"}, strings.Fields(lines[0]))
-	assert.Equal(t, []string{"."}, strings.Fields(lines[1])[1:])
-
-	var maxActualSeparators int
-
-	for _, line := range lines[2:] {
-		actualSeparators := strings.Count(strings.Fields(line)[1], string(os.PathSeparator))
-
-		if !assert.LessOrEqual(
-			t,
-			actualSeparators,
-			expectedSeparators,
-			"too many separators, flags: %s\nlines:\n%s",
-			strings.Join(flags, " "),
-			stdout,
-		) {
-			return
-		}
-
-		maxActualSeparators = max(maxActualSeparators, actualSeparators)
-	}
-
-	assert.Equal(
-		t,
-		expectedSeparators,
-		maxActualSeparators,
-		"not enough separators, \nflags: %s\nlines:\n%s",
-		strings.Join(flags, " "),
-		stdout,
-	)
 }
 
 func init() {

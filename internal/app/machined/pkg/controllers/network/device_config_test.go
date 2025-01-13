@@ -174,10 +174,10 @@ func (suite *DeviceConfigSpecSuite) TestBondSelectors() {
 							BondMode: "balance-rr",
 							BondDeviceSelectors: []v1alpha1.NetworkDeviceSelector{
 								{
-									NetworkDevicePermanentAddress: "00:*",
+									NetworkDeviceHardwareAddress: "00:*",
 								},
 								{
-									NetworkDevicePermanentAddress: "01:*",
+									NetworkDeviceHardwareAddress: "01:*",
 								},
 							},
 						},
@@ -226,7 +226,7 @@ func (suite *DeviceConfigSpecSuite) TestBondSelectors() {
 		suite.Require().NoError(err)
 
 		status := network.NewLinkStatus(network.NamespaceName, link.name)
-		status.TypedSpec().PermanentAddr = nethelpers.HardwareAddr(hwaddr)
+		status.TypedSpec().HardwareAddr = nethelpers.HardwareAddr(hwaddr)
 		suite.Require().NoError(suite.State().Create(suite.Ctx(), status))
 	}
 

@@ -17,7 +17,7 @@ import (
 // Destroy Talos cluster as set of qemu VMs.
 //
 //nolint:gocyclo
-func (p *provisioner) Destroy(ctx context.Context, cluster provision.Cluster, opts ...provision.Option) error {
+func (p *QemuProvisioner) Destroy(ctx context.Context, cluster provision.Cluster, opts ...provision.Option) error {
 	options := provision.DefaultOptions()
 
 	for _, opt := range opts {
@@ -26,32 +26,26 @@ func (p *provisioner) Destroy(ctx context.Context, cluster provision.Cluster, op
 		}
 	}
 
-	stateDirectoryPath, err := cluster.StatePath()
-	if err != nil {
-		return err
-	}
-
 	complete := false
-	deleteStateDirectory := func(stateDir string, shouldDelete bool) error {
+	deleteStateDirectory := func(shouldDelete bool) error {
 		if complete || !shouldDelete {
 			return nil
 		}
 
 		complete = true
 
-		return os.RemoveAll(stateDir)
+		stateDirectoryPath, err := cluster.StatePath()
+		if err != nil {
+			return err
+		}
+
+		return os.RemoveAll(stateDirectoryPath)
 	}
 
-	defer deleteStateDirectory(stateDirectoryPath, options.DeleteStateOnErr) //nolint:errcheck
-
-	if options.SaveClusterLogsArchivePath != "" {
-		fmt.Fprintf(options.LogWriter, "saving cluster logs archive to %s\n", options.SaveClusterLogsArchivePath)
-
-		cl.SaveClusterLogsArchive(stateDirectoryPath, options.SaveClusterLogsArchivePath)
-	}
+	defer deleteStateDirectory(options.DeleteStateOnErr) //nolint:errcheck
 
 	if options.SaveSupportArchivePath != "" {
-		fmt.Fprintf(options.LogWriter, "saving support archive to %s\n", options.SaveSupportArchivePath)
+		fmt.Fprintln(options.LogWriter, "saving support archive")
 
 		cl.Crashdump(ctx, cluster, options.LogWriter, options.SaveSupportArchivePath)
 	}
@@ -109,5 +103,5 @@ func (p *provisioner) Destroy(ctx context.Context, cluster provision.Cluster, op
 
 	fmt.Fprintln(options.LogWriter, "removing state directory")
 
-	return deleteStateDirectory(stateDirectoryPath, true)
+	return deleteStateDirectory(true)
 }

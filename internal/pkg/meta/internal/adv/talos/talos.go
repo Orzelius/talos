@@ -71,7 +71,7 @@ func NewADV(r io.Reader) (*ADV, error) {
 
 	_, err := io.ReadFull(r, buf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load first block: %w", err)
+		return nil, err
 	}
 
 	if err = a.Unmarshal(buf); err == nil {
@@ -81,14 +81,10 @@ func NewADV(r io.Reader) (*ADV, error) {
 	// try 2nd copy
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load second block: %w", err)
+		return nil, err
 	}
 
-	if err = a.Unmarshal(buf); err != nil {
-		return a, fmt.Errorf("failed to unmarshal second block: %w", err)
-	}
-
-	return a, nil
+	return a, a.Unmarshal(buf)
 }
 
 // Unmarshal single copy from the serialized representation.

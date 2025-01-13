@@ -27,9 +27,8 @@ type EtcFileSpec = typed.Resource[EtcFileSpecSpec, EtcFileSpecExtension]
 //
 //gotagsrewrite:gen
 type EtcFileSpecSpec struct {
-	Contents     []byte      `yaml:"contents" protobuf:"1"`
-	Mode         fs.FileMode `yaml:"mode" protobuf:"2"`
-	SelinuxLabel string      `yaml:"selinux_label" protobuf:"3"`
+	Contents []byte      `yaml:"contents" protobuf:"1"`
+	Mode     fs.FileMode `yaml:"mode" protobuf:"2"`
 }
 
 // NewEtcFileSpec initializes a EtcFileSpec resource.

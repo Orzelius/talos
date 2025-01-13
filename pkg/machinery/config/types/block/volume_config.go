@@ -9,7 +9,6 @@ package block
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/siderolabs/gen/optional"
 
@@ -152,10 +151,8 @@ func (s *VolumeConfigV1Alpha1) Clone() config.Document {
 
 // Validate implements config.Validator interface.
 func (s *VolumeConfigV1Alpha1) Validate(validation.RuntimeMode, ...validation.Option) ([]string, error) {
-	allowedVolumes := []string{constants.EphemeralPartitionLabel, constants.ImageCachePartitionLabel}
-
-	if slices.Index(allowedVolumes, s.MetaName) == -1 {
-		return nil, fmt.Errorf("only %q volumes are supported", allowedVolumes)
+	if s.MetaName != constants.EphemeralPartitionLabel {
+		return nil, errors.New("only EPHEMERAL volumes are supported")
 	}
 
 	var validationErrors error

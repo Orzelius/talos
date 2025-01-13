@@ -15,7 +15,7 @@ type VolumesConfig interface {
 	// ByName returns a volume config configuration by name.
 	//
 	// If the configuration is missing, the method a stub which returns implements 'nothing is set' stub.
-	ByName(name string) (VolumeConfig, bool)
+	ByName(name string) VolumeConfig
 }
 
 // VolumeConfig defines the interface to access volume configuration.
@@ -39,14 +39,14 @@ func WrapVolumesConfigList(configs ...VolumeConfig) VolumesConfig {
 
 type volumesConfigWrapper []VolumeConfig
 
-func (w volumesConfigWrapper) ByName(name string) (VolumeConfig, bool) {
+func (w volumesConfigWrapper) ByName(name string) VolumeConfig {
 	for _, doc := range w {
 		if doc.Name() == name {
-			return doc, true
+			return doc
 		}
 	}
 
-	return emptyVolumeConfig{}, false
+	return emptyVolumeConfig{}
 }
 
 type emptyVolumeConfig struct{}

@@ -83,6 +83,7 @@ func (arch Arch) PFlash(uefiEnabled bool, extraUEFISearchPaths []string) []PFlas
 			"/usr/share/OVMF",
 			"/usr/share/edk2/aarch64",      // Fedora
 			"/usr/share/edk2/experimental", // Fedora
+			"/opt/homebrew/share/qemu",     // darwin
 		}
 
 		// Secure boot enabled firmware files
@@ -96,12 +97,14 @@ func (arch Arch) PFlash(uefiEnabled bool, extraUEFISearchPaths []string) []PFlas
 			"AAVMF_CODE.fd",
 			"QEMU_EFI.fd",
 			"OVMF.stateless.fd",
+			"edk2-aarch64-code.fd",
 		}
 
 		// Empty vars files
 		uefiVarsFiles := []string{
 			"AAVMF_VARS.fd",
 			"QEMU_VARS.fd",
+			"edk2-arm-vars.fd",
 		}
 
 		// Append extra search paths
@@ -236,27 +239,33 @@ func (arch Arch) TPMDeviceArgs(socketPath string) []string {
 	}
 }
 
-// KVMArgs returns arguments for qemu to enable KVM.
-func (arch Arch) KVMArgs(kvmEnabled bool, iommu bool) []string {
-	if !kvmEnabled {
-		return []string{"-machine", arch.QemuMachine()}
+type MachineArgsParams struct {
+	kvmEnabled bool
+	hvfEnabled bool
+}
+
+// MachineArgs returns arguments for the qemu machine
+func (arch Arch) MachineArgs(params MachineArgsParams) []string {
+	if params.kvmEnabled && params.hvfEnabled {
+		panic("can't enable hvf and kvm simultaneously")
 	}
 
-	machineArg := arch.QemuMachine() + ",accel=kvm"
+	args := []string{"-machine", arch.QemuMachine()}
 
-	// ref: https://wiki.qemu.org/Features/VT-d
-	if iommu {
-		machineArg += ",kernel-irqchip=split"
+	if params.kvmEnabled {
+		args[1] += ",accel=kvm"
+	}
+	if params.hvfEnabled {
+		args[1] += ",accel=hvf"
 	}
 
 	switch arch {
 	case ArchAmd64:
-		machineArg += ",smm=on"
-
-		return []string{"-machine", machineArg}
+		args[1] += ",smm=on"
+		return args
 	case ArchArm64:
 		// smm is not supported on aarch64
-		return []string{"-machine", machineArg}
+		return args
 	default:
 		panic("unsupported architecture")
 	}

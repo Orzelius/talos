@@ -33,7 +33,7 @@ export TALOS_VERSION
 # Kubernetes
 
 export KUBECONFIG="${TMP}/kubeconfig"
-export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.32.0}
+export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.32.0-beta.0}
 
 export NAME_PREFIX="talos-e2e-${SHA}-${PLATFORM}"
 export TIMEOUT=1200
@@ -142,12 +142,6 @@ function dump_cluster_state {
 }
 
 function build_registry_mirrors {
-  if [[ "${REGISTRY_MIRROR_FLAGS:-yes}" == "no" ]]; then
-    REGISTRY_MIRROR_FLAGS=()
-
-    return
-  fi
-
   if [[ "${CI:-false}" == "true" ]]; then
     REGISTRY_MIRROR_FLAGS=()
 
@@ -157,6 +151,9 @@ function build_registry_mirrors {
 
       REGISTRY_MIRROR_FLAGS+=("--registry-mirror=${registry}=http://${addr}:5000")
     done
+  else
+    # use the value from the environment, if present
+    REGISTRY_MIRROR_FLAGS=("${REGISTRY_MIRROR_FLAGS:-}")
   fi
 }
 

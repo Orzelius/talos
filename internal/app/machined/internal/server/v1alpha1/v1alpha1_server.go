@@ -83,7 +83,6 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/meta"
 	"github.com/siderolabs/talos/pkg/machinery/nethelpers"
 	"github.com/siderolabs/talos/pkg/machinery/resources/block"
-	crires "github.com/siderolabs/talos/pkg/machinery/resources/cri"
 	etcdresource "github.com/siderolabs/talos/pkg/machinery/resources/etcd"
 	"github.com/siderolabs/talos/pkg/machinery/resources/network"
 	timeresource "github.com/siderolabs/talos/pkg/machinery/resources/time"
@@ -483,7 +482,7 @@ func (s *Server) Upgrade(ctx context.Context, in *machine.UpgradeRequest) (*mach
 
 	log.Printf("validating %q", in.GetImage())
 
-	if err := install.PullAndValidateInstallerImage(ctx, crires.RegistryBuilder(s.Controller.Runtime().State().V1Alpha2().Resources()), in.GetImage()); err != nil {
+	if err := install.PullAndValidateInstallerImage(ctx, s.Controller.Runtime().Config().Machine().Registries(), in.GetImage()); err != nil {
 		return nil, fmt.Errorf("error validating installer image %q: %w", in.GetImage(), err)
 	}
 
@@ -792,7 +791,7 @@ func (s *Server) Copy(req *machine.CopyRequest, obj machine.MachineService_CopyS
 
 // List implements the machine.MachineServer interface.
 //
-//nolint:gocyclo,cyclop
+//nolint:gocyclo
 func (s *Server) List(req *machine.ListRequest, obj machine.MachineService_ListServer) error {
 	if req == nil {
 		req = new(machine.ListRequest)
@@ -848,25 +847,11 @@ func (s *Server) List(req *machine.ListRequest, obj machine.MachineService_ListS
 		xattrs := []*machine.Xattr{}
 
 		if req.ReportXattrs {
-			// On filesystems such as devtmpfs and sysfs, xattrs are not supported.
-			// However, we can still get the label from the security.selinux xattr for automatic labels.
-			foundSelinux := false
-
 			if list, err := xattr.List(fi.FullPath); err == nil {
 				for _, attr := range list {
 					if data, err := xattr.Get(fi.FullPath, attr); err == nil {
-						if attr == "security.selinux" {
-							foundSelinux = true
-						}
-
 						xattrs = append(xattrs, &machine.Xattr{Name: attr, Data: data})
 					}
-				}
-			}
-
-			if !foundSelinux {
-				if data, err := xattr.Get(fi.FullPath, "security.selinux"); err == nil {
-					xattrs = append(xattrs, &machine.Xattr{Name: "security.selinux", Data: data})
 				}
 			}
 		}

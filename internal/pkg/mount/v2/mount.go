@@ -18,7 +18,6 @@ import (
 	"github.com/siderolabs/go-retry/retry"
 	"golang.org/x/sys/unix"
 
-	"github.com/siderolabs/talos/internal/pkg/selinux"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 )
 
@@ -30,9 +29,8 @@ type Point struct {
 	flags  uintptr
 	data   string
 
-	shared       bool
-	extraDirs    []string
-	selinuxLabel string
+	shared    bool
+	extraDirs []string
 }
 
 // NewPointOption is a mount point option.
@@ -83,13 +81,6 @@ func WithShared() NewPointOption {
 func WithExtraDirs(dirs ...string) NewPointOption {
 	return func(p *Point) {
 		p.extraDirs = append(p.extraDirs, dirs...)
-	}
-}
-
-// WithSelinuxLabel sets the mount SELinux label.
-func WithSelinuxLabel(label string) NewPointOption {
-	return func(p *Point) {
-		p.selinuxLabel = label
 	}
 }
 
@@ -299,11 +290,7 @@ func (p *Point) Move(newTarget string) error {
 }
 
 func (p *Point) mount() error {
-	if err := unix.Mount(p.source, p.target, p.fstype, p.flags, p.data); err != nil {
-		return err
-	}
-
-	return selinux.SetLabel(p.target, p.selinuxLabel)
+	return unix.Mount(p.source, p.target, p.fstype, p.flags, p.data)
 }
 
 func (p *Point) unmount(printer func(string, ...any)) error {

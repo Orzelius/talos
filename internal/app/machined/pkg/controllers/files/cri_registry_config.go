@@ -22,7 +22,7 @@ import (
 
 	"github.com/siderolabs/talos/internal/pkg/containers/cri/containerd"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
-	"github.com/siderolabs/talos/pkg/machinery/resources/cri"
+	"github.com/siderolabs/talos/pkg/machinery/resources/config"
 	"github.com/siderolabs/talos/pkg/machinery/resources/files"
 )
 
@@ -40,9 +40,9 @@ func (ctrl *CRIRegistryConfigController) Name() string {
 func (ctrl *CRIRegistryConfigController) Inputs() []controller.Input {
 	return []controller.Input{
 		{
-			Namespace: cri.NamespaceName,
-			Type:      cri.RegistriesConfigType,
-			ID:        optional.Some(cri.RegistriesConfigID),
+			Namespace: config.NamespaceName,
+			Type:      config.MachineConfigType,
+			ID:        optional.Some(config.V1Alpha1ID),
 			Kind:      controller.InputWeak,
 		},
 	}
@@ -88,9 +88,9 @@ func (ctrl *CRIRegistryConfigController) Run(ctx context.Context, r controller.R
 		case <-r.EventCh():
 		}
 
-		cfg, err := safe.ReaderGetByID[*cri.RegistriesConfig](ctx, r, cri.RegistriesConfigID)
+		cfg, err := safe.ReaderGetByID[*config.MachineConfig](ctx, r, config.V1Alpha1ID)
 		if err != nil && !state.IsNotFoundError(err) {
-			return fmt.Errorf("error getting registries config: %w", err)
+			return fmt.Errorf("error getting config: %w", err)
 		}
 
 		var (
@@ -98,13 +98,13 @@ func (ctrl *CRIRegistryConfigController) Run(ctx context.Context, r controller.R
 			criHosts            *containerd.HostsConfig
 		)
 
-		if cfg != nil {
-			criRegistryContents, err = containerd.GenerateCRIConfig(cfg.TypedSpec())
+		if cfg != nil && cfg.Config().Machine() != nil {
+			criRegistryContents, err = containerd.GenerateCRIConfig(cfg.Config().Machine().Registries())
 			if err != nil {
 				return err
 			}
 
-			criHosts, err = containerd.GenerateHosts(cfg.TypedSpec(), basePath)
+			criHosts, err = containerd.GenerateHosts(cfg.Config().Machine().Registries(), basePath)
 			if err != nil {
 				return err
 			}
@@ -118,7 +118,6 @@ func (ctrl *CRIRegistryConfigController) Run(ctx context.Context, r controller.R
 
 				spec.Contents = criRegistryContents
 				spec.Mode = 0o600
-				spec.SelinuxLabel = constants.EtcSelinuxLabel
 
 				return nil
 			}); err != nil {

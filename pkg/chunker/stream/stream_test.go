@@ -123,6 +123,10 @@ func (suite *StreamChunkerSuite) TestStreamingCancel() {
 
 	ctxCancel()
 
+	// need any I/O for chunker to notice that context got canceled
+	//nolint:errcheck
+	suite.writer.Write([]byte(""))
+
 	suite.Require().Equal([]byte("abcdefghijklmno"), <-combinedCh)
 }
 

@@ -8,9 +8,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/siderolabs/talos/pkg/machinery/constants"
-	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 )
 
 const (
@@ -21,34 +18,24 @@ const (
 )
 
 // DefaultArgs returns the Talos default kernel commandline options.
-func DefaultArgs(quirks quirks.Quirks) []string {
-	result := []string{
-		"init_on_alloc=1",
-		"slab_nomerge=",
-		"pti=on",
-		"consoleblank=0",
-		// AWS recommends setting the nvme_core.io_timeout to the highest value possible.
-		// See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html.
-		"nvme_core.io_timeout=4294967295",
-		// Disable rate limited printk
-		"printk.devkmsg=on",
-		"ima_template=ima-ng",
-		"ima_appraise=fix",
-		"ima_hash=sha512",
-	}
-
-	if quirks.SupportsSELinux() {
-		result = append(result, constants.KernelParamSELinux+"=1")
-	}
-
-	return result
+var DefaultArgs = []string{
+	"init_on_alloc=1",
+	"slab_nomerge=",
+	"pti=on",
+	"consoleblank=0",
+	// AWS recommends setting the nvme_core.io_timeout to the highest value possible.
+	// See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html.
+	"nvme_core.io_timeout=4294967295",
+	// Disable rate limited printk
+	"printk.devkmsg=on",
+	"ima_template=ima-ng",
+	"ima_appraise=fix",
+	"ima_hash=sha512",
 }
 
 // SecureBootArgs returns the kernel commandline options required for secure boot.
-func SecureBootArgs(quirks.Quirks) []string {
-	return []string{
-		"lockdown=confidentiality",
-	}
+var SecureBootArgs = []string{
+	"lockdown=confidentiality",
 }
 
 // Param represents a kernel system property.

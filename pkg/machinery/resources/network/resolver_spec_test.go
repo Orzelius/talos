@@ -17,15 +17,14 @@ import (
 
 func TestResolverSpecMarshalYAML(t *testing.T) {
 	spec := network.ResolverSpecSpec{
-		DNSServers:    []netip.Addr{netip.MustParseAddr("1.1.1.1"), netip.MustParseAddr("8.8.8.8")},
-		ConfigLayer:   network.ConfigPlatform,
-		SearchDomains: []string{"example.com"},
+		DNSServers:  []netip.Addr{netip.MustParseAddr("1.1.1.1"), netip.MustParseAddr("8.8.8.8")},
+		ConfigLayer: network.ConfigPlatform,
 	}
 
 	marshaled, err := yaml.Marshal(spec)
 	require.NoError(t, err)
 
-	assert.Equal(t, "dnsServers:\n    - 1.1.1.1\n    - 8.8.8.8\nlayer: platform\nsearchDomains:\n    - example.com\n", string(marshaled))
+	assert.Equal(t, "dnsServers:\n    - 1.1.1.1\n    - 8.8.8.8\nlayer: platform\n", string(marshaled))
 
 	var spec2 network.ResolverSpecSpec
 

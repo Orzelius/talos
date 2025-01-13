@@ -19,7 +19,7 @@ To see a live demo of this writeup, see the video below:
 
 - Linux
 - a kernel with
-  - KVM enabled (`/dev/kvm` must exist)
+  - KVM enabled (`/dev/kvm` must exist) if you wish to use KVM
   - `CONFIG_NET_SCH_NETEM` enabled
   - `CONFIG_NET_SCH_INGRESS` enabled
 - at least `CAP_SYS_ADMIN` and `CAP_NET_ADMIN` capabilities

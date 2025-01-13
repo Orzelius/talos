@@ -331,21 +331,31 @@ func (i *Imager) buildCmdline() error {
 		return err
 	}
 
-	q := quirks.New(i.prof.Version)
-
 	cmdline := procfs.NewCmdline("")
 
 	// platform kernel args
 	cmdline.Append(constants.KernelParamPlatform, p.Name())
 
-	cmdline.SetAll(p.KernelArgs(i.prof.Arch, q).Strings())
+	cmdline.SetAll(p.KernelArgs(i.prof.Arch).Strings())
 
-	if q.SupportsHaltIfInstalled() && i.prof.Output.Kind == profile.OutKindISO {
+	if quirks.New(i.prof.Version).SupportsHaltIfInstalled() && i.prof.Output.Kind == profile.OutKindISO {
 		cmdline.Append(constants.KernelParamHaltIfInstalled, "1")
 	}
 
+	if quirks.New(i.prof.Version).SupportsMetalPlatformConsoleTTYS0() && i.prof.Platform == constants.PlatformMetal && i.prof.Arch == "amd64" {
+		// Talos 1.8+ drops ttyS0 console for metal, restore previous args
+		cmdline.DeleteAll("console")
+		cmdline.Append("console", "ttyS0")
+		cmdline.Append("console", "tty0")
+	}
+
+	if quirks.New(i.prof.Version).SupportsSELinux() {
+		// Talos 1.9 introduces SELinux in permissive mode
+		cmdline.Append(constants.KernelParamSELinux, "1")
+	}
+
 	// board kernel args
-	if i.prof.Board != "" && !q.SupportsOverlay() {
+	if i.prof.Board != "" && !quirks.New(i.prof.Version).SupportsOverlay() {
 		var b talosruntime.Board
 
 		b, err = board.NewBoard(i.prof.Board)
@@ -368,12 +378,12 @@ func (i *Imager) buildCmdline() error {
 	}
 
 	// first defaults, then extra kernel args to allow extra kernel args to override defaults
-	if err = cmdline.AppendAll(kernel.DefaultArgs(q)); err != nil {
+	if err = cmdline.AppendAll(kernel.DefaultArgs); err != nil {
 		return err
 	}
 
 	if i.prof.SecureBootEnabled() {
-		if err = cmdline.AppendAll(kernel.SecureBootArgs(q)); err != nil {
+		if err = cmdline.AppendAll(kernel.SecureBootArgs); err != nil {
 			return err
 		}
 	}

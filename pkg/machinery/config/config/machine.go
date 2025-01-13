@@ -15,7 +15,6 @@ import (
 
 	"github.com/siderolabs/talos/pkg/machinery/cel"
 	"github.com/siderolabs/talos/pkg/machinery/config/machine"
-	"github.com/siderolabs/talos/pkg/machinery/nethelpers"
 )
 
 // MachineConfig defines the requirements for a config that pertains to machine
@@ -46,7 +45,6 @@ type MachineConfig interface {
 	NodeLabels() NodeLabels
 	NodeAnnotations() NodeAnnotations
 	NodeTaints() NodeTaints
-	BaseRuntimeSpecOverrides() map[string]any
 }
 
 // SeccompProfile defines the requirements for a config that pertains to seccomp
@@ -144,7 +142,6 @@ type MachineScheduler interface {
 type MachineNetwork interface {
 	Hostname() string
 	Resolvers() []string
-	SearchDomains() []string
 	Devices() []Device
 	ExtraHosts() []ExtraHost
 	KubeSpan() KubeSpan
@@ -321,7 +318,6 @@ type KubeSpanFilters interface {
 type NetworkDeviceSelector interface {
 	Bus() string
 	HardwareAddress() string
-	PermanentAddress() string
 	PCIID() string
 	KernelDriver() string
 	Physical() *bool
@@ -451,8 +447,6 @@ type Features interface {
 	DiskQuotaSupportEnabled() bool
 	HostDNS() HostDNS
 	KubePrism() KubePrism
-	ImageCache() ImageCache
-	NodeAddressSortAlgorithm() nethelpers.AddressSortAlgorithm
 }
 
 // KubernetesTalosAPIAccess describes the Kubernetes Talos API access features.
@@ -473,11 +467,6 @@ type HostDNS interface {
 	Enabled() bool
 	ForwardKubeDNSToHost() bool
 	ResolveMemberNames() bool
-}
-
-// ImageCache describes the image cache configuration.
-type ImageCache interface {
-	LocalEnabled() bool
 }
 
 // UdevConfig describes configuration for udev.

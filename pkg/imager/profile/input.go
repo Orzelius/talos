@@ -16,7 +16,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/siderolabs/gen/value"
 	"golang.org/x/sync/errgroup"
@@ -55,8 +54,6 @@ type Input struct {
 	RPiFirmware FileAsset `yaml:"rpiFirmware,omitempty"`
 	// Base installer image to mutate.
 	BaseInstaller ContainerAsset `yaml:"baseInstaller,omitempty"`
-	// ImageCache is an image cache to inject into the asset.
-	ImageCache ContainerAsset `yaml:"imageCache,omitempty"`
 	// OverlayInstaller is an overlay image to inject into the installer.
 	//
 	// OverlayInstaller architecture should match the output installer architecture.
@@ -281,7 +278,6 @@ func (c *ContainerAsset) Pull(ctx context.Context, arch string, printf func(stri
 			authn.NewMultiKeychain(
 				authn.DefaultKeychain,
 				github.Keychain,
-				google.Keychain,
 			),
 		),
 	}

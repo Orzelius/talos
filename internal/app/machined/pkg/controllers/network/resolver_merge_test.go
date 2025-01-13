@@ -92,9 +92,8 @@ func (suite *ResolverMergeSuite) TestMerge() {
 
 	static := network.NewResolverSpec(network.ConfigNamespaceName, "configuration/resolvers")
 	*static.TypedSpec() = network.ResolverSpecSpec{
-		DNSServers:    []netip.Addr{netip.MustParseAddr("2.2.2.2")},
-		SearchDomains: []string{"example.com", "example.org", "example.net"},
-		ConfigLayer:   network.ConfigMachineConfiguration,
+		DNSServers:  []netip.Addr{netip.MustParseAddr("2.2.2.2")},
+		ConfigLayer: network.ConfigMachineConfiguration,
 	}
 
 	for _, res := range []resource.Resource{def, dhcp1, dhcp2, static} {
@@ -106,7 +105,6 @@ func (suite *ResolverMergeSuite) TestMerge() {
 			"resolvers",
 		}, func(r *network.ResolverSpec, asrt *assert.Assertions) {
 			asrt.Equal(*static.TypedSpec(), *r.TypedSpec())
-			asrt.Equal([]string{"example.com", "example.org", "example.net"}, r.TypedSpec().SearchDomains)
 		},
 	)
 
@@ -116,7 +114,7 @@ func (suite *ResolverMergeSuite) TestMerge() {
 		[]string{
 			"resolvers",
 		}, func(r *network.ResolverSpec, asrt *assert.Assertions) {
-			asrt.Equal([]netip.Addr{netip.MustParseAddr("1.1.2.0"), netip.MustParseAddr("1.1.2.1")}, r.TypedSpec().DNSServers)
+			asrt.Equal(r.TypedSpec().DNSServers, []netip.Addr{netip.MustParseAddr("1.1.2.0"), netip.MustParseAddr("1.1.2.1")})
 		},
 	)
 }

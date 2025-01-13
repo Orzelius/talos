@@ -5,10 +5,7 @@
 package pcr
 
 import (
-	"bytes"
 	"crypto"
-	"fmt"
-	"io"
 )
 
 // Digest implements the PCR extension algorithm.
@@ -37,19 +34,9 @@ func (d *Digest) Hash() []byte {
 
 // Extend extends the current hash with the specified data.
 func (d *Digest) Extend(data []byte) {
-	d.ExtendFrom(bytes.NewReader(data)) //nolint:errcheck
-}
-
-// ExtendFrom extends the current hash with the specified io,WriterTo.
-func (d *Digest) ExtendFrom(rdr io.WriterTo) error {
 	// create hash of incoming data
 	hash := d.alg.New()
-
-	_, err := rdr.WriteTo(hash)
-	if err != nil {
-		return fmt.Errorf("failed to hash data: %v", err)
-	}
-
+	hash.Write(data)
 	hashSum := hash.Sum(nil)
 
 	// extend hash with previous data and hashed incoming data
@@ -59,6 +46,4 @@ func (d *Digest) ExtendFrom(rdr io.WriterTo) error {
 
 	// set sum as new hash
 	d.hash = hash.Sum(nil)
-
-	return nil
 }

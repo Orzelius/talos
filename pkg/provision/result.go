@@ -5,6 +5,7 @@
 package provision
 
 import (
+	"net"
 	"net/netip"
 
 	"github.com/google/uuid"
@@ -61,6 +62,6 @@ type NodeInfo struct {
 
 	IPs []netip.Addr
 
-	APIPort      int
+	APIAddress   *net.TCPAddr
 	TPM2StateDir string
 }

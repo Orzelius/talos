@@ -18,7 +18,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sys/unix"
 
-	"github.com/siderolabs/talos/internal/pkg/selinux"
 	"github.com/siderolabs/talos/pkg/machinery/resources/files"
 )
 
@@ -134,7 +133,7 @@ func (ctrl *EtcFileController) Run(ctx context.Context, r controller.Runtime, lo
 
 				logger.Debug("writing file contents", zap.String("dst", dst), zap.Stringer("version", spec.Metadata().Version()))
 
-				if err = UpdateFile(dst, spec.TypedSpec().Contents, spec.TypedSpec().Mode, spec.TypedSpec().SelinuxLabel); err != nil {
+				if err = UpdateFile(dst, spec.TypedSpec().Contents, spec.TypedSpec().Mode); err != nil {
 					return fmt.Errorf("error updating %q: %w", dst, err)
 				}
 
@@ -195,16 +194,11 @@ func createBindMount(src, dst string, mode os.FileMode) (err error) {
 
 // UpdateFile is like `os.WriteFile`, but it will only update the file if the
 // contents have changed.
-func UpdateFile(filename string, contents []byte, mode os.FileMode, selinuxLabel string) error {
+func UpdateFile(filename string, contents []byte, mode os.FileMode) error {
 	oldContents, err := os.ReadFile(filename)
 	if err == nil && bytes.Equal(oldContents, contents) {
-		return selinux.SetLabel(filename, selinuxLabel)
+		return nil
 	}
 
-	err = os.WriteFile(filename, contents, mode)
-	if err != nil {
-		return err
-	}
-
-	return selinux.SetLabel(filename, selinuxLabel)
+	return os.WriteFile(filename, contents, mode)
 }

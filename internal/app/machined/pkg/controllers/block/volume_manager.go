@@ -6,7 +6,6 @@ package block
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -182,6 +181,11 @@ func (ctrl *VolumeManagerController) Run(ctx context.Context, r controller.Runti
 			return fmt.Errorf("error fetching system disk: %w", err)
 		}
 
+		systemInfo, err := safe.ReaderGetByID[*hardware.SystemInformation](ctx, r, hardware.SystemInformationID)
+		if err != nil && !state.IsNotFoundError(err) {
+			return fmt.Errorf("error fetching system information: %w", err)
+		}
+
 		volumeLifecycle, err := safe.ReaderGetByID[*block.VolumeLifecycle](ctx, r, block.VolumeLifecycleID)
 		if err != nil && !state.IsNotFoundError(err) {
 			return fmt.Errorf("error fetching volume lifecycle: %w", err)
@@ -205,15 +209,9 @@ func (ctrl *VolumeManagerController) Run(ctx context.Context, r controller.Runti
 				return volumes.DiskContext{}, err
 			}
 
-			var optionalSystemDisk optional.Optional[bool]
-
-			if systemDisk != nil {
-				optionalSystemDisk = optional.Some(d.Metadata().ID() == systemDisk.TypedSpec().DiskID)
-			}
-
 			return volumes.DiskContext{
 				Disk:       spec,
-				SystemDisk: optionalSystemDisk,
+				SystemDisk: systemDisk != nil && d.Metadata().ID() == systemDisk.TypedSpec().DiskID,
 			}, nil
 		})
 		if err != nil {
@@ -314,19 +312,8 @@ func (ctrl *VolumeManagerController) Run(ctx context.Context, r controller.Runti
 					Disks:                   diskSpecs,
 					DevicesReady:            devicesReady,
 					PreviousWaveProvisioned: vc.TypedSpec().Provisioning.Wave <= fullyProvisionedWave,
-					GetSystemInformation: func(ctx context.Context) (*hardware.SystemInformation, error) {
-						systemInfo, err := safe.ReaderGetByID[*hardware.SystemInformation](ctx, r, hardware.SystemInformationID)
-						if err != nil && !state.IsNotFoundError(err) {
-							return nil, fmt.Errorf("error fetching system information: %w", err)
-						}
-
-						if systemInfo == nil {
-							return nil, errors.New("system information not available")
-						}
-
-						return systemInfo, nil
-					},
-					Lifecycle: volumeLifecycle,
+					SystemInformation:       systemInfo,
+					Lifecycle:               volumeLifecycle,
 				},
 			); err != nil {
 				volumeStatus.PreFailPhase = volumeStatus.Phase
@@ -346,28 +333,7 @@ func (ctrl *VolumeManagerController) Run(ctx context.Context, r controller.Runti
 			}
 
 			if prevPhase != volumeStatus.Phase || err != nil {
-				fields := []zap.Field{
-					zap.String("phase", fmt.Sprintf("%s -> %s", prevPhase, volumeStatus.Phase)),
-					zap.Error(err),
-				}
-
-				if volumeStatus.Location != "" {
-					fields = append(fields, zap.String("location", volumeStatus.Location))
-				}
-
-				if volumeStatus.MountLocation != "" && volumeStatus.MountLocation != volumeStatus.Location {
-					fields = append(fields, zap.String("mountLocation", volumeStatus.MountLocation))
-				}
-
-				if volumeStatus.ParentLocation != "" {
-					fields = append(fields, zap.String("parentLocation", volumeStatus.ParentLocation))
-				}
-
-				if len(volumeStatus.EncryptionFailedSyncs) > 0 {
-					fields = append(fields, zap.Strings("encryptionFailedSyncs", volumeStatus.EncryptionFailedSyncs))
-				}
-
-				volumeLogger.Info("volume status", fields...)
+				volumeLogger.Info("volume status", zap.String("phase", fmt.Sprintf("%s -> %s", prevPhase, volumeStatus.Phase)), zap.Error(err))
 			}
 
 			allClosed = allClosed && volumeStatus.Phase == block.VolumePhaseClosed

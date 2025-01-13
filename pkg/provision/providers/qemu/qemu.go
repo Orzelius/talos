@@ -14,13 +14,23 @@ import (
 	"github.com/siderolabs/talos/pkg/provision/providers/vm"
 )
 
-type provisioner struct {
+type QemuProvisioner struct {
 	vm.Provisioner
+}
+
+func NewQemuProvisioner(ctx context.Context) (QemuProvisioner, error) {
+	p := QemuProvisioner{
+		Provisioner: vm.Provisioner{
+			Name: "qemu",
+		},
+	}
+
+	return p, nil
 }
 
 // NewProvisioner initializes qemu provisioner.
 func NewProvisioner(ctx context.Context) (provision.Provisioner, error) {
-	p := &provisioner{
+	p := &QemuProvisioner{
 		vm.Provisioner{
 			Name: "qemu",
 		},
@@ -30,12 +40,12 @@ func NewProvisioner(ctx context.Context) (provision.Provisioner, error) {
 }
 
 // Close and release resources.
-func (p *provisioner) Close() error {
+func (p *QemuProvisioner) Close() error {
 	return nil
 }
 
 // GenOptions provides a list of additional config generate options.
-func (p *provisioner) GenOptions(networkReq provision.NetworkRequest) []generate.Option {
+func (p *QemuProvisioner) GenOptions(networkReq provision.NetworkRequestBase) []generate.Option {
 	hasIPv4 := false
 	hasIPv6 := false
 
@@ -71,25 +81,25 @@ func (p *provisioner) GenOptions(networkReq provision.NetworkRequest) []generate
 }
 
 // GetInClusterKubernetesControlPlaneEndpoint returns the Kubernetes control plane endpoint.
-func (p *provisioner) GetInClusterKubernetesControlPlaneEndpoint(networkReq provision.NetworkRequest, controlPlanePort int) string {
+func (p *QemuProvisioner) GetInClusterKubernetesControlPlaneEndpoint(networkReq provision.NetworkRequestBase, controlPlanePort int) string {
 	// QEMU provisioner always runs TCP loadbalancer on the bridge IP and port 6443.
 	return "https://" + nethelpers.JoinHostPort(networkReq.GatewayAddrs[0].String(), controlPlanePort)
 }
 
 // GetExternalKubernetesControlPlaneEndpoint returns the Kubernetes control plane endpoint.
-func (p *provisioner) GetExternalKubernetesControlPlaneEndpoint(networkReq provision.NetworkRequest, controlPlanePort int) string {
+func (p *QemuProvisioner) GetExternalKubernetesControlPlaneEndpoint(networkReq provision.NetworkRequestBase, controlPlanePort int) string {
 	// for QEMU, external and in-cluster endpoints are same.
 	return p.GetInClusterKubernetesControlPlaneEndpoint(networkReq, controlPlanePort)
 }
 
 // GetTalosAPIEndpoints returns a list of Talos API endpoints.
-func (p *provisioner) GetTalosAPIEndpoints(provision.NetworkRequest) []string {
+func (p *QemuProvisioner) GetTalosAPIEndpoints(provision.NetworkRequestBase) []string {
 	// nil means that the API of controlplane endpoints should be used
 	return nil
 }
 
 // GetFirstInterface returns first network interface name.
-func (p *provisioner) GetFirstInterface() v1alpha1.IfaceSelector {
+func (p *QemuProvisioner) GetFirstInterface() v1alpha1.IfaceSelector {
 	return v1alpha1.IfaceBySelector(v1alpha1.NetworkDeviceSelector{
 		NetworkDeviceKernelDriver: "virtio_net",
 	})

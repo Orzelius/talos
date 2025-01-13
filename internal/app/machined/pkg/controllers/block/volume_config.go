@@ -78,7 +78,7 @@ func labelVolumeMatchAndNonEmpty(label string) cel.Expression {
 }
 
 func metaMatch() cel.Expression {
-	return cel.MustExpression(cel.ParseBooleanExpression(fmt.Sprintf("volume.partition_label == '%s' && volume.name in ['', 'talosmeta'] && volume.size == 1048576u", constants.MetaPartitionLabel), celenv.VolumeLocator())) //nolint:lll
+	return cel.MustExpression(cel.ParseBooleanExpression(fmt.Sprintf("volume.partition_label == '%s' && volume.name in ['', 'talosmeta']", constants.MetaPartitionLabel), celenv.VolumeLocator()))
 }
 
 func systemDiskMatch() cel.Expression {
@@ -209,7 +209,7 @@ func (ctrl *VolumeConfigController) Run(ctx context.Context, r controller.Runtim
 
 func (ctrl *VolumeConfigController) manageEphemeral(config cfg.Config) func(vc *block.VolumeConfig) error {
 	return func(vc *block.VolumeConfig) error {
-		extraVolumeConfig, _ := config.Volumes().ByName(constants.EphemeralPartitionLabel)
+		extraVolumeConfig := config.Volumes().ByName(constants.EphemeralPartitionLabel)
 
 		vc.TypedSpec().Type = block.VolumeTypePartition
 
@@ -232,8 +232,7 @@ func (ctrl *VolumeConfigController) manageEphemeral(config cfg.Config) func(vc *
 		}
 
 		vc.TypedSpec().Mount = block.MountSpec{
-			TargetPath:   constants.EphemeralMountPoint,
-			SelinuxLabel: constants.EphemeralSelinuxLabel,
+			TargetPath: constants.EphemeralMountPoint,
 		}
 
 		vc.TypedSpec().Locator = block.LocatorSpec{
@@ -255,8 +254,7 @@ func (ctrl *VolumeConfigController) manageStateConfigPresent(config cfg.Config) 
 	return func(vc *block.VolumeConfig) error {
 		vc.TypedSpec().Type = block.VolumeTypePartition
 		vc.TypedSpec().Mount = block.MountSpec{
-			TargetPath:   constants.StateMountPoint,
-			SelinuxLabel: constants.StateSelinuxLabel,
+			TargetPath: constants.StateMountPoint,
 		}
 
 		vc.TypedSpec().Provisioning = block.ProvisioningSpec{
@@ -295,8 +293,7 @@ func (ctrl *VolumeConfigController) manageStateNoConfig(encryptionMeta *runtime.
 	return func(vc *block.VolumeConfig) error {
 		vc.TypedSpec().Type = block.VolumeTypePartition
 		vc.TypedSpec().Mount = block.MountSpec{
-			TargetPath:   constants.StateMountPoint,
-			SelinuxLabel: constants.StateSelinuxLabel,
+			TargetPath: constants.StateMountPoint,
 		}
 
 		match := labelVolumeMatchAndNonEmpty(constants.StatePartitionLabel)

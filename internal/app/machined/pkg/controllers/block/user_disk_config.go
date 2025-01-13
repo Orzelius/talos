@@ -105,11 +105,7 @@ func (ctrl *UserDiskConfigController) Run(ctx context.Context, r controller.Runt
 							vc.TypedSpec().Type = block.VolumeTypePartition
 
 							vc.TypedSpec().Provisioning = block.ProvisioningSpec{
-								// it's crucial to keep the order of provisioning locked within each disk, otherwise
-								// provisioning might order them different way, and create partitions in wrong order
-								// the matcher on partition idx would then discover partitions in wrong order, and mount them
-								// in wrong order
-								Wave: block.WaveLegacyUserDisks + idx,
+								Wave: block.WaveUserDisks,
 								DiskSelector: block.DiskSelector{
 									Match: diskPathMatch(resolvedDevicePath),
 								},
@@ -127,7 +123,6 @@ func (ctrl *UserDiskConfigController) Run(ctx context.Context, r controller.Runt
 								Match: partitionIdxMatch(resolvedDevicePath, idx+1),
 							}
 
-							// TODO: label user disks
 							vc.TypedSpec().Mount = block.MountSpec{
 								TargetPath: part.MountPoint(),
 							}

@@ -51,7 +51,6 @@ type Syncer struct {
 	CurrentTime CurrentTimeFunc
 	NTPQuery    QueryFunc
 	AdjustTime  AdjustTimeFunc
-	DisableRTC  bool
 }
 
 // Measurement is a struct containing correction data based on a time request.
@@ -160,19 +159,14 @@ func (syncer *Syncer) isSpike(resp *ntp.Response) bool {
 //
 //nolint:gocyclo,cyclop
 func (syncer *Syncer) Run(ctx context.Context) {
-	var (
-		rtcClock *rtc.RTC
-		err      error
-	)
+	RTCClockInitialize.Do(func() {
+		var err error
 
-	if !syncer.DisableRTC {
-		rtcClock, err = rtc.OpenRTC()
+		RTCClock, err = rtc.OpenRTC()
 		if err != nil {
 			syncer.logger.Error("failure opening RTC, ignored", zap.Error(err))
-		} else {
-			defer rtcClock.Close() //nolint:errcheck
 		}
-	}
+	})
 
 	pollInterval := time.Duration(0)
 
@@ -222,7 +216,7 @@ func (syncer *Syncer) Run(ctx context.Context) {
 		)
 
 		if resp != nil && !spike {
-			err = syncer.adjustTime(resp.ClockOffset, resp.Leap, lastSyncServer, pollInterval, rtcClock)
+			err = syncer.adjustTime(resp.ClockOffset, resp.Leap, lastSyncServer, pollInterval)
 
 			if err == nil {
 				if !syncer.timeSyncNotified {
@@ -299,8 +293,7 @@ func (syncer *Syncer) query(ctx context.Context) (lastSyncServer string, measure
 	return lastSyncServer, measurement, err
 }
 
-// IsPTPDevice checks if a given server string represents a PTP device.
-func IsPTPDevice(server string) bool {
+func (syncer *Syncer) isPTPDevice(server string) bool {
 	return strings.HasPrefix(server, "/dev/")
 }
 
@@ -308,7 +301,7 @@ func (syncer *Syncer) resolveServers(ctx context.Context) ([]string, error) {
 	var serverList []string
 
 	for _, server := range syncer.getTimeServers() {
-		if IsPTPDevice(server) {
+		if syncer.isPTPDevice(server) {
 			serverList = append(serverList, server)
 		} else {
 			ips, err := net.LookupIP(server)
@@ -332,41 +325,17 @@ func (syncer *Syncer) resolveServers(ctx context.Context) ([]string, error) {
 }
 
 func (syncer *Syncer) queryServer(server string) (*Measurement, error) {
-	if IsPTPDevice(server) {
+	if syncer.isPTPDevice(server) {
 		return syncer.queryPTP(server)
 	}
 
 	return syncer.queryNTP(server)
 }
 
-func (syncer *Syncer) queryPTP(device string) (*Measurement, error) {
-	ts, err := QueryPTPDevice(device)
+func (syncer *Syncer) queryPTP(server string) (*Measurement, error) {
+	phc, err := os.Open(server)
 	if err != nil {
 		return nil, err
-	}
-
-	offset := time.Until(time.Unix(ts.Sec, ts.Nsec))
-	syncer.logger.Debug("PTP clock",
-		zap.Duration("clock_offset", offset),
-		zap.Int64("sec", ts.Sec),
-		zap.Int64("nsec", ts.Nsec),
-		zap.String("device", device),
-	)
-
-	meas := &Measurement{
-		ClockOffset: offset,
-		Leap:        0,
-		Spike:       false,
-	}
-
-	return meas, err
-}
-
-// QueryPTPDevice queries PTP device for current time.
-func QueryPTPDevice(device string) (unix.Timespec, error) {
-	phc, err := os.Open(device)
-	if err != nil {
-		return unix.Timespec{}, err
 	}
 
 	defer phc.Close() //nolint:errcheck
@@ -385,10 +354,24 @@ func QueryPTPDevice(device string) (unix.Timespec, error) {
 
 	err = unix.ClockGettime(clockid, &ts)
 	if err != nil {
-		return unix.Timespec{}, err
+		return nil, err
 	}
 
-	return ts, err
+	offset := time.Until(time.Unix(ts.Sec, ts.Nsec))
+	syncer.logger.Debug("PTP clock",
+		zap.Duration("clock_offset", offset),
+		zap.Int64("sec", ts.Sec),
+		zap.Int64("nsec", ts.Nsec),
+		zap.String("device", server),
+	)
+
+	meas := &Measurement{
+		ClockOffset: offset,
+		Leap:        0,
+		Spike:       false,
+	}
+
+	return meas, err
 }
 
 func (syncer *Syncer) queryNTP(server string) (*Measurement, error) {
@@ -432,7 +415,7 @@ func log2i(v uint64) int {
 // adjustTime adds an offset to the current time.
 //
 //nolint:gocyclo
-func (syncer *Syncer) adjustTime(offset time.Duration, leapSecond ntp.LeapIndicator, server string, nextPollInterval time.Duration, rtcClock *rtc.RTC) error {
+func (syncer *Syncer) adjustTime(offset time.Duration, leapSecond ntp.LeapIndicator, server string, nextPollInterval time.Duration) error {
 	var (
 		buf  bytes.Buffer
 		req  unix.Timex
@@ -526,8 +509,8 @@ func (syncer *Syncer) adjustTime(offset time.Duration, leapSecond ntp.LeapIndica
 		}
 
 		if jump {
-			if rtcClock != nil {
-				if rtcErr := rtcClock.Set(time.Now().Add(offset)); rtcErr != nil {
+			if RTCClock != nil {
+				if rtcErr := RTCClock.Set(time.Now().Add(offset)); rtcErr != nil {
 					syncer.logger.Error("error syncing RTC", zap.Error(rtcErr))
 				} else {
 					syncer.logger.Info("synchronized RTC with system clock")

@@ -7,7 +7,6 @@ package v1alpha1
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -20,7 +19,6 @@ import (
 
 	"github.com/cosi-project/runtime/pkg/state"
 	"github.com/hashicorp/go-multierror"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	sideronet "github.com/siderolabs/net"
 
 	"github.com/siderolabs/talos/pkg/machinery/config/config"
@@ -215,16 +213,12 @@ func (c *Config) Validate(mode validation.RuntimeMode, options ...validation.Opt
 		}
 	}
 
-	for i, disk := range c.MachineConfig.MachineDisks {
-		if disk == nil {
-			result = multierror.Append(result, fmt.Errorf("machine.disks[%d] is null", i))
-
-			continue
-		}
-
-		for i, pt := range disk.DiskPartitions {
-			if pt.DiskSize == 0 && i != len(disk.DiskPartitions)-1 {
-				result = multierror.Append(result, fmt.Errorf("partition for disk %q is set to occupy full disk, but it's not the last partition in the list", disk.Device()))
+	if c.MachineConfig.MachineDisks != nil {
+		for _, disk := range c.MachineConfig.MachineDisks {
+			for i, pt := range disk.DiskPartitions {
+				if pt.DiskSize == 0 && i != len(disk.DiskPartitions)-1 {
+					result = multierror.Append(result, fmt.Errorf("partition for disk %q is set to occupy full disk, but it's not the last partition in the list", disk.Device()))
+				}
 			}
 		}
 	}
@@ -328,40 +322,8 @@ func (c *Config) Validate(mode validation.RuntimeMode, options ...validation.Opt
 		}
 	}
 
-	if c.MachineConfig.MachineFeatures != nil && c.MachineConfig.MachineFeatures.FeatureNodeAddressSortAlgorithm != "" {
-		if _, err := nethelpers.AddressSortAlgorithmString(c.MachineConfig.MachineFeatures.FeatureNodeAddressSortAlgorithm); err != nil {
-			result = multierror.Append(result, fmt.Errorf("invalid node address sort algorithm: %w", err))
-		}
-	}
-
 	if c.ConfigPersist != nil && !*c.ConfigPersist {
 		result = multierror.Append(result, errors.New(".persist should be enabled"))
-	}
-
-	if len(c.Machine().BaseRuntimeSpecOverrides()) > 0 {
-		// try to unmarshal the overrides to ensure they are valid
-		jsonSpec, err := json.Marshal(c.Machine().BaseRuntimeSpecOverrides())
-		if err != nil {
-			result = multierror.Append(result, fmt.Errorf("failed to marshal base runtime spec overrides: %w", err))
-		} else {
-			var ociSpec specs.Spec
-
-			if err := json.Unmarshal(jsonSpec, &ociSpec); err != nil {
-				result = multierror.Append(result, fmt.Errorf("failed to unmarshal base runtime spec overrides: %w", err))
-			}
-		}
-	}
-
-	for key, val := range c.MachineConfig.MachineRegistries.RegistryConfig {
-		if val == nil {
-			result = multierror.Append(result, fmt.Errorf("registries.config[%q] is null", key))
-		}
-	}
-
-	for key, val := range c.MachineConfig.MachineRegistries.RegistryMirrors {
-		if val == nil {
-			result = multierror.Append(result, fmt.Errorf("registries.mirrors[%q] is null", key))
-		}
 	}
 
 	if opts.Strict {

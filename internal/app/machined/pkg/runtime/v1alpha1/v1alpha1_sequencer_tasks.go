@@ -70,7 +70,6 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	metamachinery "github.com/siderolabs/talos/pkg/machinery/meta"
 	blockres "github.com/siderolabs/talos/pkg/machinery/resources/block"
-	crires "github.com/siderolabs/talos/pkg/machinery/resources/cri"
 	resourcefiles "github.com/siderolabs/talos/pkg/machinery/resources/files"
 	"github.com/siderolabs/talos/pkg/machinery/resources/k8s"
 	resourceruntime "github.com/siderolabs/talos/pkg/machinery/resources/runtime"
@@ -160,21 +159,6 @@ func SaveConfig(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
 
 		return os.WriteFile(constants.ConfigPath, b, 0o600)
 	}, "saveConfig"
-}
-
-// Sleep represents the Sleep task.
-func Sleep(d time.Duration) func(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
-	return func(_ runtime.Sequence, _ any) (runtime.TaskExecutionFunc, string) {
-		return func(ctx context.Context, logger *log.Logger, r runtime.Runtime) error {
-			select {
-			case <-time.After(d):
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-
-			return nil
-		}, "sleep"
-	}
 }
 
 // MemorySizeCheck represents the MemorySizeCheck task.
@@ -378,7 +362,7 @@ func StartDashboard(_ runtime.Sequence, _ any) (runtime.TaskExecutionFunc, strin
 // StartUdevd represents the task to start udevd.
 func StartUdevd(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
 	return func(ctx context.Context, logger *log.Logger, r runtime.Runtime) (err error) {
-		mp := mountv2.NewSystemOverlay([]string{constants.UdevDir}, constants.UdevDir, mountv2.WithShared(), mountv2.WithFlags(unix.MS_I_VERSION), mountv2.WithSelinuxLabel(constants.UdevRulesLabel))
+		mp := mountv2.NewSystemOverlay([]string{constants.UdevDir}, constants.UdevDir, mountv2.WithShared(), mountv2.WithFlags(unix.MS_I_VERSION))
 
 		if _, err = mp.Mount(); err != nil {
 			return err
@@ -547,10 +531,9 @@ func SetupVarDirectory(runtime.Sequence, any) (runtime.TaskExecutionFunc, string
 		}
 
 		for _, dir := range []struct {
-			Path         string
-			Mode         os.FileMode
-			UID, GID     int
-			SELinuxLabel string
+			Path     string
+			Mode     os.FileMode
+			UID, GID int
 		}{
 			{
 				Path: "/var/log",
@@ -569,14 +552,8 @@ func SetupVarDirectory(runtime.Sequence, any) (runtime.TaskExecutionFunc, string
 				Mode: 0o755,
 			},
 			{
-				Path:         "/var/lib/containerd",
-				Mode:         0o000,
-				SELinuxLabel: "system_u:object_r:containerd_state_t:s0",
-			},
-			{
-				Path:         "/var/lib/kubelet",
-				Mode:         0o700,
-				SELinuxLabel: "system_u:object_r:kubelet_state_t:s0",
+				Path: "/var/lib/kubelet",
+				Mode: 0o700,
 			},
 			{
 				Path: "/var/run/lock",
@@ -598,10 +575,6 @@ func SetupVarDirectory(runtime.Sequence, any) (runtime.TaskExecutionFunc, string
 			}
 
 			if err := os.Chmod(dir.Path, dir.Mode); err != nil {
-				return err
-			}
-
-			if err := selinux.SetLabel(dir.Path, dir.SELinuxLabel); err != nil {
 				return err
 			}
 
@@ -688,7 +661,6 @@ func MountUserDisks(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
 				volumeStatus.TypedSpec().MountLocation,
 				volumeConfig.TypedSpec().Mount.TargetPath,
 				volumeStatus.TypedSpec().Filesystem.String(),
-				mountv2.WithSelinuxLabel(volumeConfig.TypedSpec().Mount.SelinuxLabel),
 			))
 		}
 
@@ -841,7 +813,6 @@ func injectCRIConfigPatch(ctx context.Context, st state.State, content []byte) e
 	etcFileSpec := resourcefiles.NewEtcFileSpec(resourcefiles.NamespaceName, constants.CRICustomizationConfigPart)
 	etcFileSpec.TypedSpec().Mode = 0o600
 	etcFileSpec.TypedSpec().Contents = content
-	etcFileSpec.TypedSpec().SelinuxLabel = constants.EtcSelinuxLabel
 
 	if err := st.Create(ctx, etcFileSpec); err != nil {
 		return err
@@ -1529,7 +1500,6 @@ func Upgrade(_ runtime.Sequence, data any) (runtime.TaskExecutionFunc, string) {
 			in.GetImage(),
 			r.Config(),
 			r.ConfigContainer(),
-			crires.RegistryBuilder(r.State().V1Alpha2().Resources()),
 			install.OptionsFromUpgradeRequest(r, in)...,
 		)
 		if err != nil {
@@ -1620,7 +1590,7 @@ func SaveStateEncryptionConfig(runtime.Sequence, any) (runtime.TaskExecutionFunc
 }
 
 // haltIfInstalled halts the boot process if Talos is installed to disk but booted from ISO.
-func haltIfInstalled(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
+func haltIfInstalled(seq runtime.Sequence, _ any) (runtime.TaskExecutionFunc, string) {
 	return func(ctx context.Context, logger *log.Logger, r runtime.Runtime) error {
 		ctx, cancel := context.WithTimeout(ctx, constants.BootTimeout)
 		defer cancel()
@@ -1628,15 +1598,13 @@ func haltIfInstalled(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) 
 		timer := time.NewTicker(30 * time.Second)
 		defer timer.Stop()
 
-		for {
+		select {
+		case <-timer.C:
 			logger.Printf("Talos is already installed to disk but booted from another media and %s kernel parameter is set. Please reboot from the disk.", constants.KernelParamHaltIfInstalled)
-
-			select {
-			case <-timer.C:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
+		case <-ctx.Done():
 		}
+
+		return nil
 	}, "haltIfInstalled"
 }
 
@@ -1661,7 +1629,7 @@ func MountStatePartition(required bool) func(seq runtime.Sequence, _ any) (runti
 				}
 			}
 
-			return mount.SystemPartitionMount(ctx, r, logger, constants.StatePartitionLabel, !required)
+			return mount.SystemPartitionMount(ctx, r, logger, constants.StatePartitionLabel)
 		}, "mountStatePartition"
 	}
 }
@@ -1680,7 +1648,7 @@ func MountEphemeralPartition(runtime.Sequence, any) (runtime.TaskExecutionFunc, 
 			return err
 		}
 
-		return mount.SystemPartitionMount(ctx, r, logger, constants.EphemeralPartitionLabel, false,
+		return mount.SystemPartitionMount(ctx, r, logger, constants.EphemeralPartitionLabel,
 			mountv2.WithProjectQuota(r.Config().Machine().Features().DiskQuotaSupportEnabled()))
 	}, "mountEphemeralPartition"
 }
@@ -1702,12 +1670,6 @@ func Install(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
 			installerImage := r.Config().Machine().Install().Image()
 			if installerImage == "" {
 				installerImage = images.DefaultInstallerImage
-			}
-
-			logger.Printf("waiting for the image cache")
-
-			if err = crires.WaitForImageCache(ctx, r.State().V1Alpha2().Resources()); err != nil {
-				return fmt.Errorf("failed to wait for the image cache: %w", err)
 			}
 
 			var disk string
@@ -1748,7 +1710,6 @@ func Install(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
 				installerImage,
 				r.Config(),
 				r.ConfigContainer(),
-				crires.RegistryBuilder(r.State().V1Alpha2().Resources()),
 				install.WithForce(true),
 				install.WithZero(r.Config().Machine().Install().Zero()),
 				install.WithExtraKernelArgs(r.Config().Machine().Install().ExtraKernelArgs()),
@@ -1778,11 +1739,6 @@ func Install(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
 
 			logger.Println("install successful")
 
-			logger.Printf("waiting for the image cache copy")
-
-			if err = crires.WaitForImageCacheCopy(ctx, r.State().V1Alpha2().Resources()); err != nil {
-				return fmt.Errorf("failed to wait for the image cache: %w", err)
-			}
 		case r.State().Machine().IsInstallStaged():
 			systemDisk, err := blockres.GetSystemDisk(ctx, r.State().V1Alpha2().Resources())
 			if err != nil {
@@ -1801,12 +1757,6 @@ func Install(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
 				return fmt.Errorf("error unserializing install options: %w", err)
 			}
 
-			logger.Printf("waiting for the image cache")
-
-			if err = crires.WaitForImageCache(ctx, r.State().V1Alpha2().Resources()); err != nil {
-				return fmt.Errorf("failed to wait for the image cache: %w", err)
-			}
-
 			logger.Printf("performing staged upgrade via %q", r.State().Machine().StagedInstallImageRef())
 
 			err = install.RunInstallerContainer(
@@ -1814,7 +1764,6 @@ func Install(runtime.Sequence, any) (runtime.TaskExecutionFunc, string) {
 				r.State().Machine().StagedInstallImageRef(),
 				r.Config(),
 				r.ConfigContainer(),
-				crires.RegistryBuilder(r.State().V1Alpha2().Resources()),
 				install.WithOptions(options),
 			)
 			if err != nil {

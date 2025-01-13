@@ -5,14 +5,9 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
-
-	"github.com/docker/docker/api/types/container"
 
 	cl "github.com/siderolabs/talos/pkg/cluster"
 	"github.com/siderolabs/talos/pkg/provision"
@@ -21,7 +16,7 @@ import (
 // Destroy Talos cluster as set of Docker nodes.
 //
 // Only cluster.Info().ClusterName and cluster.Info().Network.Name is being used.
-func (p *provisioner) Destroy(ctx context.Context, cluster provision.Cluster, opts ...provision.Option) error {
+func (p *DockerProvisioner) Destroy(ctx context.Context, cluster provision.Cluster, opts ...provision.Option) error {
 	options := provision.DefaultOptions()
 
 	for _, opt := range opts {
@@ -30,35 +25,29 @@ func (p *provisioner) Destroy(ctx context.Context, cluster provision.Cluster, op
 		}
 	}
 
-	stateDirectoryPath, err := cluster.StatePath()
-	if err != nil {
-		return err
-	}
-
 	complete := false
-	deleteStateDirectory := func(stateDir string, shouldDelete bool) error {
+	deleteStateDirectory := func(shouldDelete bool) error {
 		if complete || !shouldDelete {
 			return nil
 		}
 
 		complete = true
 
-		return os.RemoveAll(stateDir)
-	}
+		stateDirectoryPath, err := cluster.StatePath()
+		if err != nil {
+			return err
+		}
 
-	defer deleteStateDirectory(stateDirectoryPath, options.DeleteStateOnErr) //nolint:errcheck
-
-	if options.SaveClusterLogsArchivePath != "" {
-		fmt.Fprintf(options.LogWriter, "saving cluster logs archive to %s\n", options.SaveClusterLogsArchivePath)
-
-		p.saveContainerLogs(ctx, cluster, options.SaveClusterLogsArchivePath)
+		return os.RemoveAll(stateDirectoryPath)
 	}
 
 	if options.SaveSupportArchivePath != "" {
-		fmt.Fprintf(options.LogWriter, "saving support archive to %s\n", options.SaveSupportArchivePath)
+		fmt.Fprintln(options.LogWriter, "saving support archive")
 
 		cl.Crashdump(ctx, cluster, options.LogWriter, options.SaveSupportArchivePath)
 	}
+
+	defer deleteStateDirectory(options.DeleteStateOnErr) //nolint:errcheck
 
 	if err := p.destroyNodes(ctx, cluster.Info().ClusterName, &options); err != nil {
 		return err
@@ -70,54 +59,5 @@ func (p *provisioner) Destroy(ctx context.Context, cluster provision.Cluster, op
 		return err
 	}
 
-	return deleteStateDirectory(stateDirectoryPath, true)
-}
-
-func (p *provisioner) saveContainerLogs(ctx context.Context, cluster provision.Cluster, logsArchivePath string) {
-	containers, err := p.listNodes(ctx, cluster.Info().ClusterName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error listing containers: %s\n", err)
-
-		return
-	}
-
-	statePath, err := cluster.StatePath()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error getting state path: %s\n", err)
-
-		return
-	}
-
-	for _, ctr := range containers {
-		name := ctr.Names[0][1:]
-
-		logs, err := p.client.ContainerLogs(ctx, ctr.ID, container.LogsOptions{
-			ShowStdout: true,
-			ShowStderr: true,
-			Tail:       "1000",
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error querying container logs: %s\n", err)
-
-			continue
-		}
-
-		logPath := filepath.Join(statePath, fmt.Sprintf("%s.log", name))
-
-		var logData bytes.Buffer
-
-		if _, err := io.Copy(&logData, logs); err != nil {
-			fmt.Fprintf(os.Stderr, "error reading container logs: %s\n", err)
-
-			continue
-		}
-
-		if err := os.WriteFile(logPath, logData.Bytes(), 0o644); err != nil {
-			fmt.Fprintf(os.Stderr, "error writing container logs: %s\n", err)
-
-			continue
-		}
-	}
-
-	cl.SaveClusterLogsArchive(statePath, logsArchivePath)
+	return deleteStateDirectory(true)
 }

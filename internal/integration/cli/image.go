@@ -8,11 +8,6 @@ package cli
 
 import (
 	"regexp"
-	"strings"
-	"testing"
-
-	"github.com/siderolabs/gen/xslices"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/siderolabs/talos/internal/integration/base"
 	"github.com/siderolabs/talos/pkg/machinery/config/machine"
@@ -48,19 +43,10 @@ func (suite *ImageSuite) TestList() {
 	)
 }
 
-var imageCacheQuery = []string{"get", "imagecacheconfig", "--output", "jsonpath='{.spec.copyStatus}'"}
-
 // TestPull verifies pulling images to the CRI.
 func (suite *ImageSuite) TestPull() {
-	const image = "registry.k8s.io/kube-apiserver:v1.27.0"
-
 	node := suite.RandomDiscoveredNodeInternalIP()
-
-	if stdout, _ := suite.RunCLI(imageCacheQuery); strings.Contains(stdout, "ready") {
-		suite.T().Logf("skipping as the image cache is present")
-
-		return
-	}
+	image := "registry.k8s.io/kube-apiserver:v1.27.0"
 
 	suite.RunCLI([]string{"image", "pull", "--nodes", node, image},
 		base.StdoutEmpty(),
@@ -72,31 +58,6 @@ func (suite *ImageSuite) TestPull() {
 		base.StdoutShouldMatch(regexp.MustCompile(regexp.QuoteMeta("sha256:89b8d9dbef2b905b7d028ca8b7f79d35ebd9baa66b0a3ee2ddd4f3e0e2804b45"))),
 		base.StdoutShouldMatch(regexp.MustCompile(regexp.QuoteMeta("registry.k8s.io/kube-apiserver@sha256:89b8d9dbef2b905b7d028ca8b7f79d35ebd9baa66b0a3ee2ddd4f3e0e2804b45"))),
 	)
-}
-
-// TestCacheCreate verifies creating a cache tarball.
-func (suite *ImageSuite) TestCacheCreate() {
-	if testing.Short() {
-		suite.T().Skip("skipping in short mode")
-	}
-
-	stdOut, _ := suite.RunCLI([]string{"image", "default"})
-
-	imagesList := strings.Split(strings.Trim(stdOut, "\n"), "\n")
-
-	imagesArgs := xslices.Map(imagesList[:2], func(image string) string {
-		return "--images=" + image
-	})
-
-	cacheDir := suite.T().TempDir()
-
-	args := []string{"image", "cache-create", "--image-cache-path", cacheDir, "--force"}
-
-	args = append(args, imagesArgs...)
-
-	suite.RunCLI(args, base.StdoutEmpty(), base.StderrNotEmpty())
-
-	assert.FileExistsf(suite.T(), cacheDir+"/index.json", "index.json should exist in the image cache directory")
 }
 
 func init() {

@@ -6,7 +6,7 @@
 package config
 
 // Config defines the interface to access contents of the machine configuration.
-type Config interface { //nolint:interfacebloat
+type Config interface {
 	Debug() bool
 	Machine() MachineConfig
 	Cluster() ClusterConfig
@@ -17,5 +17,4 @@ type Config interface { //nolint:interfacebloat
 	TrustedRoots() TrustedRootsConfig
 	Volumes() VolumesConfig
 	KubespanConfig() KubespanConfig
-	PCIDriverRebindConfig() PCIDriverRebindConfig
 }

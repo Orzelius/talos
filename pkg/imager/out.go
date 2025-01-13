@@ -89,20 +89,7 @@ func (i *Imager) outISO(ctx context.Context, path string, report *reporter.Repor
 
 	scratchSpace := filepath.Join(i.tempDir, "iso")
 
-	var (
-		err                error
-		zeroContainerAsset profile.ContainerAsset
-	)
-
-	if i.prof.Input.ImageCache != zeroContainerAsset {
-		if err := os.MkdirAll(filepath.Join(scratchSpace, "imagecache"), 0o755); err != nil {
-			return err
-		}
-
-		if err := i.prof.Input.ImageCache.Extract(ctx, filepath.Join(scratchSpace, "imagecache"), i.prof.Arch, printf); err != nil {
-			return err
-		}
-	}
+	var err error
 
 	if i.prof.SecureBootEnabled() {
 		isoOptions := pointer.SafeDeref(i.prof.Output.ISOOptions)
@@ -236,7 +223,6 @@ func (i *Imager) outImage(ctx context.Context, path string, report *reporter.Rep
 	return nil
 }
 
-//nolint:gocyclo
 func (i *Imager) buildImage(ctx context.Context, path string, printf func(string, ...any)) error {
 	if err := utils.CreateRawDisk(printf, path, i.prof.Output.ImageOptions.DiskSize); err != nil {
 		return err
@@ -245,9 +231,8 @@ func (i *Imager) buildImage(ctx context.Context, path string, printf func(string
 	printf("attaching loopback device")
 
 	var (
-		loDevice           losetup.Device
-		err                error
-		zeroContainerAsset profile.ContainerAsset
+		loDevice losetup.Device
+		err      error
 	)
 
 	for range 10 {
@@ -313,20 +298,6 @@ func (i *Imager) buildImage(ctx context.Context, path string, printf func(string
 
 	if opts.Board == "" {
 		opts.Board = constants.BoardNone
-	}
-
-	if i.prof.Input.ImageCache != zeroContainerAsset {
-		imageCacheDir := filepath.Join(i.tempDir, "imagecache")
-
-		if err := os.MkdirAll(imageCacheDir, 0o755); err != nil {
-			return err
-		}
-
-		if err := i.prof.Input.ImageCache.Extract(ctx, imageCacheDir, i.prof.Arch, printf); err != nil {
-			return err
-		}
-
-		opts.ImageCachePath = imageCacheDir
 	}
 
 	installer, err := install.NewInstaller(ctx, cmdline, install.ModeImage, opts)
@@ -492,6 +463,7 @@ func (i *Imager) outInstaller(ctx context.Context, path string, report *reporter
 		for _, extraArtifact := range []struct {
 			sourcePath string
 			imagePath  string
+			mode       os.FileMode
 		}{
 			{
 				sourcePath: filepath.Join(i.tempDir, "overlay-installer", constants.ImagerOverlayArtifactsPath),
@@ -500,6 +472,7 @@ func (i *Imager) outInstaller(ctx context.Context, path string, report *reporter
 			{
 				sourcePath: filepath.Join(i.tempDir, "overlay-installer", constants.ImagerOverlayInstallersPath, i.prof.Overlay.Name),
 				imagePath:  strings.TrimLeft(constants.ImagerOverlayInstallerDefaultPath, "/"),
+				mode:       0o755,
 			},
 			{
 				sourcePath: filepath.Join(i.tempDir, constants.ImagerOverlayExtraOptionsPath),
@@ -511,6 +484,10 @@ func (i *Imager) outInstaller(ctx context.Context, path string, report *reporter
 			extraFiles, err = filemap.Walk(extraArtifact.sourcePath, extraArtifact.imagePath)
 			if err != nil {
 				return fmt.Errorf("failed to walk extra artifact %s: %w", extraArtifact.sourcePath, err)
+			}
+
+			for i := range extraFiles {
+				extraFiles[i].ImageMode = int64(extraArtifact.mode)
 			}
 
 			overlayArtifacts = append(overlayArtifacts, extraFiles...)

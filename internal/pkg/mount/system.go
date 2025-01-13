@@ -26,29 +26,8 @@ var (
 	mountpointsMutex sync.RWMutex
 )
 
-// IdempotentSystemPartitionMounter is a temporary workaround for not having proper volume mount controller.
-func IdempotentSystemPartitionMounter(r runtime.Runtime) func(label string, opts ...mountv2.NewPointOption) error {
-	return func(label string, opts ...mountv2.NewPointOption) error {
-		if IsSystemPartitionMounted(label) {
-			return nil
-		}
-
-		return SystemPartitionMount(context.Background(), r, log.Default(), label, false, opts...)
-	}
-}
-
-// IsSystemPartitionMounted checks if a system partition is mounted by the label.
-func IsSystemPartitionMounted(label string) bool {
-	mountpointsMutex.RLock()
-	defer mountpointsMutex.RUnlock()
-
-	_, ok := unmounters[label]
-
-	return ok
-}
-
 // SystemPartitionMount mounts a system partition by the label.
-func SystemPartitionMount(ctx context.Context, r runtime.Runtime, logger *log.Logger, label string, silent bool, opts ...mountv2.NewPointOption) (err error) {
+func SystemPartitionMount(ctx context.Context, r runtime.Runtime, logger *log.Logger, label string, opts ...mountv2.NewPointOption) (err error) {
 	volumeStatus, err := safe.StateGetByID[*block.VolumeStatus](ctx, r.State().V1Alpha2().Resources(), label)
 	if err != nil {
 		return fmt.Errorf("error getting volume status %q: %w", label, err)
@@ -63,8 +42,6 @@ func SystemPartitionMount(ctx context.Context, r runtime.Runtime, logger *log.Lo
 		return fmt.Errorf("error getting volume config %q: %w", label, err)
 	}
 
-	opts = append(opts, mountv2.WithSelinuxLabel(volumeConfig.TypedSpec().Mount.SelinuxLabel))
-
 	mountpoint := mountv2.NewPoint(
 		volumeStatus.TypedSpec().MountLocation,
 		volumeConfig.TypedSpec().Mount.TargetPath,
@@ -77,29 +54,26 @@ func SystemPartitionMount(ctx context.Context, r runtime.Runtime, logger *log.Lo
 		return err
 	}
 
-	// silent mounts skip resource notification to other components
-	if !silent {
-		// record mount as the resource
-		mountStatus := runtimeres.NewMountStatus(v1alpha1.NamespaceName, label)
-		mountStatus.TypedSpec().Source = volumeStatus.TypedSpec().MountLocation
-		mountStatus.TypedSpec().Target = volumeConfig.TypedSpec().Mount.TargetPath
-		mountStatus.TypedSpec().FilesystemType = volumeStatus.TypedSpec().Filesystem.String()
-		mountStatus.TypedSpec().Encrypted = volumeStatus.TypedSpec().EncryptionProvider != block.EncryptionProviderNone
+	// record mount as the resource
+	mountStatus := runtimeres.NewMountStatus(v1alpha1.NamespaceName, label)
+	mountStatus.TypedSpec().Source = volumeStatus.TypedSpec().MountLocation
+	mountStatus.TypedSpec().Target = volumeConfig.TypedSpec().Mount.TargetPath
+	mountStatus.TypedSpec().FilesystemType = volumeStatus.TypedSpec().Filesystem.String()
+	mountStatus.TypedSpec().Encrypted = volumeStatus.TypedSpec().EncryptionProvider != block.EncryptionProviderNone
 
-		if mountStatus.TypedSpec().Encrypted {
-			encryptionProviders := make(map[string]struct{})
+	if mountStatus.TypedSpec().Encrypted {
+		encryptionProviders := make(map[string]struct{})
 
-			for _, cfg := range volumeConfig.TypedSpec().Encryption.Keys {
-				encryptionProviders[cfg.Type.String()] = struct{}{}
-			}
-
-			mountStatus.TypedSpec().EncryptionProviders = maps.Keys(encryptionProviders)
+		for _, cfg := range volumeConfig.TypedSpec().Encryption.Keys {
+			encryptionProviders[cfg.Type.String()] = struct{}{}
 		}
 
-		// ignore the error if the MountStatus already exists, as many mounts are silently skipped with the flag SkipIfMounted
-		if err = r.State().V1Alpha2().Resources().Create(context.Background(), mountStatus); err != nil && !state.IsConflictError(err) {
-			return fmt.Errorf("error creating mount status resource: %w", err)
-		}
+		mountStatus.TypedSpec().EncryptionProviders = maps.Keys(encryptionProviders)
+	}
+
+	// ignore the error if the MountStatus already exists, as many mounts are silently skipped with the flag SkipIfMounted
+	if err = r.State().V1Alpha2().Resources().Create(context.Background(), mountStatus); err != nil && !state.IsConflictError(err) {
+		return fmt.Errorf("error creating mount status resource: %w", err)
 	}
 
 	mountpointsMutex.Lock()
@@ -130,9 +104,7 @@ func SystemPartitionUnmount(r runtime.Runtime, logger *log.Logger, label string)
 	}
 
 	if err = r.State().V1Alpha2().Resources().Destroy(context.Background(), runtimeres.NewMountStatus(v1alpha1.NamespaceName, label).Metadata()); err != nil {
-		if !state.IsNotFoundError(err) {
-			return fmt.Errorf("error destroying mount status resource: %w", err)
-		}
+		return fmt.Errorf("error destroying mount status resource: %w", err)
 	}
 
 	mountpointsMutex.Lock()

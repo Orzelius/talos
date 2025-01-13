@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/containerd/containerd/v2/pkg/cap"
 	"github.com/containerd/containerd/v2/pkg/oci"
@@ -54,7 +53,7 @@ func (o *APID) ID(r runtime.Runtime) string {
 }
 
 // apidResourceFilter filters access to COSI state for apid.
-func apidResourceFilter(_ context.Context, access state.Access) error {
+func apidResourceFilter(ctx context.Context, access state.Access) error {
 	if !access.Verb.Readonly() {
 		return errors.New("write access denied")
 	}
@@ -74,7 +73,7 @@ func apidResourceFilter(_ context.Context, access state.Access) error {
 }
 
 // PreFunc implements the Service interface.
-func (o *APID) PreFunc(_ context.Context, r runtime.Runtime) error {
+func (o *APID) PreFunc(ctx context.Context, r runtime.Runtime) error {
 	// filter apid access to make sure apid can only access its certificates
 	resources := state.Filter(r.State().V1Alpha2().Resources(), apidResourceFilter)
 
@@ -118,7 +117,7 @@ func (o *APID) PreFunc(_ context.Context, r runtime.Runtime) error {
 }
 
 // PostFunc implements the Service interface.
-func (o *APID) PostFunc(runtime.Runtime, events.ServiceState) (err error) {
+func (o *APID) PostFunc(r runtime.Runtime, state events.ServiceState) (err error) {
 	o.runtimeServer.Stop()
 
 	return os.RemoveAll(constants.APIRuntimeSocketPath)
@@ -130,7 +129,7 @@ func (o *APID) Condition(r runtime.Runtime) conditions.Condition {
 }
 
 // DependsOn implements the Service interface.
-func (o *APID) DependsOn(runtime.Runtime) []string {
+func (o *APID) DependsOn(r runtime.Runtime) []string {
 	return []string{"containerd"}
 }
 
@@ -201,7 +200,6 @@ func (o *APID) Runner(r runtime.Runtime) (runner.Runner, error) {
 		runner.WithLoggingManager(r.Logging()),
 		runner.WithContainerdAddress(constants.SystemContainerdAddress),
 		runner.WithEnv(env),
-		runner.WithGracefulShutdownTimeout(15*time.Second),
 		runner.WithCgroupPath(constants.CgroupApid),
 		runner.WithSelinuxLabel(constants.SelinuxLabelApid),
 		runner.WithOCISpecOpts(

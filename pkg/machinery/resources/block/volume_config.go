@@ -45,9 +45,8 @@ type VolumeConfigSpec struct {
 
 // Wave constants.
 const (
-	WaveSystemDisk      = -1
-	WaveUserDisks       = 0
-	WaveLegacyUserDisks = 1000000 // legacy user disks rely on specific order of provisioning
+	WaveSystemDisk = -1
+	WaveUserDisks  = 0
 )
 
 // ProvisioningSpec is the spec for volume provisioning.
@@ -148,8 +147,6 @@ type EncryptionKey struct {
 type MountSpec struct {
 	// Mount path for the volume.
 	TargetPath string `yaml:"targetPath" protobuf:"1"`
-	// SELinux label for the volume.
-	SelinuxLabel string `yaml:"selinuxLabel" protobuf:"2"`
 }
 
 // NewVolumeConfig initializes a BlockVolumeConfig resource.

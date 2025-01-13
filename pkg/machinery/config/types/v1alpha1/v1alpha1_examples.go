@@ -162,7 +162,6 @@ func machineNetworkConfigExample() *NetworkConfig {
 			},
 		},
 		NameServers: []string{"9.8.7.6", "8.7.6.5"},
-		Searches:    []string{"example.org", "example.com"},
 	}
 }
 
@@ -610,7 +609,7 @@ func networkDeviceSelectorExamples() []NetworkDeviceSelector {
 		},
 		{
 			NetworkDeviceHardwareAddress: "*:f0:ab",
-			NetworkDeviceKernelDriver:    "virtio_net",
+			NetworkDeviceKernelDriver:    "virtio",
 		},
 	}
 }
@@ -749,49 +748,6 @@ func admissionControlConfigExample() []*AdmissionPluginConfig {
 	}
 }
 
-func authorizationConfigExample() []*AuthorizationConfigAuthorizerConfig {
-	return []*AuthorizationConfigAuthorizerConfig{
-		{
-			AuthorizerType: "Webhook",
-			AuthorizerName: "webhook",
-			AuthorizerWebhook: Unstructured{
-				Object: map[string]any{
-					"timeout":                    "3s",
-					"subjectAccessReviewVersion": "v1",
-					"matchConditionSubjectAccessReviewVersion": "v1",
-					"failurePolicy": "Deny",
-					"connectionInfo": map[string]any{
-						"type": "InClusterConfig",
-					},
-					"matchConditions": []map[string]any{
-						{
-							"expression": "has(request.resourceAttributes)",
-						},
-						{
-							"expression": "!(\\'system:serviceaccounts:kube-system\\' in request.groups)",
-						},
-					},
-				},
-			},
-		},
-		{
-			AuthorizerType: "Webhook",
-			AuthorizerName: "in-cluster-authorizer",
-			AuthorizerWebhook: Unstructured{
-				Object: map[string]any{
-					"timeout":                    "3s",
-					"subjectAccessReviewVersion": "v1",
-					"matchConditionSubjectAccessReviewVersion": "v1",
-					"failurePolicy": "NoOpinion",
-					"connectionInfo": map[string]any{
-						"type": "InClusterConfig",
-					},
-				},
-			},
-		},
-	}
-}
-
 func installExtensionsExample() []InstallExtensionConfig {
 	return []InstallExtensionConfig{
 		{
@@ -815,21 +771,5 @@ func kubernetesTalosAPIAccessConfigExample() *KubernetesTalosAPIAccessConfig {
 func kmsKeyExample() *EncryptionKeyKMS {
 	return &EncryptionKeyKMS{
 		KMSEndpoint: "https://192.168.88.21:4443",
-	}
-}
-
-func machineBaseRuntimeSpecOverridesExample() Unstructured {
-	return Unstructured{
-		Object: map[string]any{
-			"process": map[string]any{
-				"rlimits": []map[string]any{
-					{
-						"type": "RLIMIT_NOFILE",
-						"hard": 1024,
-						"soft": 1024,
-					},
-				},
-			},
-		},
 	}
 }

@@ -4,8 +4,6 @@
 
 package version
 
-//go:generate go run ./gen.go
-
 import (
 	"bytes"
 	"strings"

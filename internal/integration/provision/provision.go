@@ -486,7 +486,7 @@ func (suite *BaseSuite) setupCluster(options clusterOptions) {
 	genOptions := suite.provisioner.GenOptions(request.Network)
 
 	for _, registryMirror := range DefaultSettings.RegistryMirrors {
-		parts := strings.Split(registryMirror, "=")
+		parts := strings.SplitN(registryMirror, "=", 2)
 		suite.Require().Len(parts, 2)
 
 		genOptions = append(genOptions, generate.WithRegistryMirror(parts[0], parts[1]))

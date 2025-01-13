@@ -303,7 +303,6 @@ func (suite *ExtensionsSuiteQEMU) TestExtensionsQEMUGuestAgent() {
 
 			return err
 		}, 5*time.Minute,
-		suite.CleanupFailedPods,
 	)
 }
 
@@ -495,7 +494,6 @@ func (suite *ExtensionsSuiteQEMU) TestExtensionsMdADM() {
 		suite.ctx, node, func(nodeCtx context.Context) error {
 			return base.IgnoreGRPCUnavailable(suite.Client.Reboot(nodeCtx))
 		}, 5*time.Minute,
-		suite.CleanupFailedPods,
 	)
 
 	suite.Require().True(suite.mdADMArrayExists(), "expected mdadm array to be present")
@@ -583,7 +581,6 @@ func (suite *ExtensionsSuiteQEMU) TestExtensionsZFS() {
 		suite.ctx, node, func(nodeCtx context.Context) error {
 			return base.IgnoreGRPCUnavailable(suite.Client.Reboot(nodeCtx))
 		}, 5*time.Minute,
-		suite.CleanupFailedPods,
 	)
 
 	suite.Require().True(suite.checkZFSPoolMounted(), "expected zfs pool to be mounted")
@@ -593,20 +590,6 @@ func (suite *ExtensionsSuiteQEMU) checkZFSPoolMounted() bool {
 	node := suite.RandomDiscoveredNodeInternalIP(machine.TypeWorker)
 
 	ctx := client.WithNode(suite.ctx, node)
-
-	stream, err := suite.Client.LS(ctx, &machineapi.ListRequest{
-		Root:  "/dev/zvol/tank/vol",
-		Types: []machineapi.ListRequest_Type{machineapi.ListRequest_REGULAR},
-	})
-
-	suite.Require().NoError(err)
-
-	suite.Require().NoError(helpers.ReadGRPCStream(stream, func(info *machineapi.FileInfo, node string, multipleNodes bool) error {
-		suite.Require().Equal("/dev/zvol/tank/vol", info.Name, "expected /dev/zvol/tank/vol to exist")
-		suite.Require().Equal("zd0", info.Link, "expected /dev/zvol/tank/vol to be linked to zd0")
-
-		return nil
-	}))
 
 	disks, err := safe.StateListAll[*block.Disk](ctx, suite.Client.COSI)
 	suite.Require().NoError(err)

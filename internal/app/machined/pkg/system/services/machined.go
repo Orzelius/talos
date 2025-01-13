@@ -99,8 +99,7 @@ var rules = map[string]role.Set{
 	"/cosi.resource.State/Update":  role.MakeSet(role.Admin),
 	"/cosi.resource.State/Watch":   role.MakeSet(role.Admin, role.Operator, role.Reader),
 
-	"/storage.StorageService/Disks":           role.MakeSet(role.Admin, role.Operator, role.Reader),
-	"/storage.StorageService/BlockDeviceWipe": role.MakeSet(role.Admin),
+	"/storage.StorageService/Disks": role.MakeSet(role.Admin, role.Operator, role.Reader),
 
 	"/time.TimeService/Time":      role.MakeSet(role.Admin, role.Operator, role.Reader),
 	"/time.TimeService/TimeCheck": role.MakeSet(role.Admin, role.Operator, role.Reader),
@@ -111,7 +110,7 @@ type machinedService struct {
 }
 
 // Main is an entrypoint to the API service.
-func (s *machinedService) Main(ctx context.Context, _ runtime.Runtime, logWriter io.Writer) error {
+func (s *machinedService) Main(ctx context.Context, r runtime.Runtime, logWriter io.Writer) error {
 	injector := &authz.Injector{
 		Mode: authz.MetadataOnly,
 	}
@@ -172,26 +171,19 @@ func (s *machinedService) Main(ctx context.Context, _ runtime.Runtime, logWriter
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	go func() {
+		//nolint:errcheck
+		server.Serve(listener)
+	}()
 
-	closed := make(chan struct{})
+	<-ctx.Done()
 
-	context.AfterFunc(ctx, func() {
-		defer close(closed)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
 
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer shutdownCancel()
+	factory.ServerGracefulStop(server, shutdownCtx) //nolint:contextcheck
 
-		factory.ServerGracefulStop(server, shutdownCtx) //nolint:contextcheck
-	})
-
-	err = server.Serve(listener)
-
-	cancel()
-	<-closed
-
-	return err
+	return nil
 }
 
 var _ system.HealthcheckedService = (*Machined)(nil)
@@ -203,27 +195,27 @@ type Machined struct {
 }
 
 // ID implements the Service interface.
-func (m *Machined) ID(runtime.Runtime) string {
+func (m *Machined) ID(r runtime.Runtime) string {
 	return machinedServiceID
 }
 
 // PreFunc implements the Service interface.
-func (m *Machined) PreFunc(context.Context, runtime.Runtime) error {
+func (m *Machined) PreFunc(ctx context.Context, r runtime.Runtime) error {
 	return nil
 }
 
 // PostFunc implements the Service interface.
-func (m *Machined) PostFunc(runtime.Runtime, events.ServiceState) (err error) {
+func (m *Machined) PostFunc(r runtime.Runtime, state events.ServiceState) (err error) {
 	return nil
 }
 
 // Condition implements the Service interface.
-func (m *Machined) Condition(runtime.Runtime) conditions.Condition {
+func (m *Machined) Condition(r runtime.Runtime) conditions.Condition {
 	return nil
 }
 
 // DependsOn implements the Service interface.
-func (m *Machined) DependsOn(runtime.Runtime) []string {
+func (m *Machined) DependsOn(r runtime.Runtime) []string {
 	return nil
 }
 

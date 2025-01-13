@@ -411,6 +411,10 @@ func (installer *Installer) apply(conn *Connection) error {
 		}
 	}
 
+	if err != nil {
+		return err
+	}
+
 	return installer.writeTalosconfig(list, talosconfig)
 }
 
