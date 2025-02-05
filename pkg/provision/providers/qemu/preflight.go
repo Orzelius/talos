@@ -31,7 +31,6 @@ func (p *provisioner) preflightChecks(ctx context.Context, request provision.Clu
 
 	for _, check := range []func(ctx context.Context) error{
 		checkContext.verifyRoot,
-		checkContext.checkKVM,
 		checkContext.qemuExecutable,
 		checkContext.checkFlashImages,
 		checkContext.swtpmExecutable,
@@ -59,15 +58,6 @@ func (check *preflightCheckContext) verifyRoot(context.Context) error {
 	}
 
 	return nil
-}
-
-func (check *preflightCheckContext) checkKVM(context.Context) error {
-	f, err := os.OpenFile("/dev/kvm", os.O_RDWR, 0)
-	if err != nil {
-		return fmt.Errorf("error opening /dev/kvm, please make sure KVM support is enabled in Linux kernel: %w", err)
-	}
-
-	return f.Close()
 }
 
 func (check *preflightCheckContext) qemuExecutable(context.Context) error {

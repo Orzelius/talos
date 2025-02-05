@@ -169,7 +169,7 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		ExtraISOPath:      extraISOPath,
 		PFlashImages:      pflashImages,
 		MonitorPath:       state.GetRelativePath(fmt.Sprintf("%s.monitor", nodeReq.Name)),
-		EnableKVM:         opts.TargetArch == runtime.GOARCH,
+		EnableKVM:         opts.TargetArch == runtime.GOARCH && opts.UseKvm,
 		BadRTC:            nodeReq.BadRTC,
 		DefaultBootOrder:  defaultBootOrder,
 		BootloaderEnabled: opts.BootloaderEnabled,

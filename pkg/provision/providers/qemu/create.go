@@ -7,6 +7,7 @@ package qemu
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/siderolabs/talos/pkg/machinery/constants"
@@ -24,6 +25,16 @@ func (p *provisioner) Create(ctx context.Context, request provision.ClusterReque
 		if err := opt(&options); err != nil {
 			return nil, err
 		}
+	}
+
+	kvmErr := checkKVM()
+	if kvmErr != nil {
+		fmt.Println(kvmErr)
+		fmt.Println("running without KVM")
+
+		options.UseKvm = false
+	} else {
+		options.UseKvm = true
 	}
 
 	arch := Arch(options.TargetArch)
@@ -147,4 +158,13 @@ func (p *provisioner) Create(ctx context.Context, request provision.ClusterReque
 	}
 
 	return state, nil
+}
+
+func checkKVM() error {
+	f, err := os.OpenFile("/dev/kvm", os.O_RDWR, 0)
+	if err != nil {
+		return fmt.Errorf("error opening /dev/kvm, please make sure KVM support is enabled in Linux kernel: %w", err)
+	}
+
+	return f.Close()
 }

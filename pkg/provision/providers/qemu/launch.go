@@ -405,7 +405,7 @@ func launchVM(config *LaunchConfig) error {
 		}
 	}
 
-	args = append(args, config.ArchitectureData.KVMArgs(config.EnableKVM, config.IOMMUEnabled)...)
+	args = append(args, config.ArchitectureData.getMachineArgs(config.EnableKVM, config.IOMMUEnabled)...)
 
 	pflashArgs := make([]string, 2*len(config.PFlashImages))
 	for i := range config.PFlashImages {
