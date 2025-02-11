@@ -242,7 +242,7 @@ func getCreateCommand() *cobra.Command {
 		qemuFlags.BoolVar(&ops.qemu.clusterDiskPreallocate, clusterDiskPreallocateFlag, true, "whether disk space should be preallocated")
 		qemuFlags.StringSliceVar(&ops.qemu.clusterDisks, clusterDisksFlag, []string{}, "list of disks to create for each VM in format: <mount_point1>:<size1>:<mount_point2>:<size2>")
 		qemuFlags.IntVar(&ops.qemu.extraDisks, extraDisksFlag, 0, "number of extra disks to create for each worker VM")
-		qemuFlags.StringSliceVar(&ops.qemu.extraDisksDrivers, extraDisksDriversFlag, nil, "driver for each extra disk (virtio, ide, ahci, scsi, nvme, megaraid)")
+		qemuFlags.StringSliceVar(&ops.qemu.extraDisksDrivers, extraDisksDriversFlag, nil, "driver for each extra disk (virtio, ide, ahci, scsi, nvme)")
 		qemuFlags.IntVar(&ops.qemu.extraDiskSize, extraDiskSizeFlag, 5*1024, "default limit on disk size in MB (each VM)")
 		qemuFlags.StringVar(&ops.qemu.targetArch, targetArchFlag, stdruntime.GOARCH, "cluster architecture")
 		qemuFlags.StringSliceVar(&ops.qemu.cniBinPath, cniBinPathFlag, []string{filepath.Join(cluster.DefaultCNIDir, "bin")}, "search path for CNI binaries")
