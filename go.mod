@@ -31,7 +31,7 @@ replace (
 
 // fd-leak related replacements: https://github.com/siderolabs/talos/issues/9412
 // https://github.com/insomniacslk/dhcp/pull/550
-replace github.com/insomniacslk/dhcp => github.com/smira/dhcp v0.0.0-20241001122726-31e9ef21c016
+replace github.com/insomniacslk/dhcp => github.com/smira/dhcp v0.0.0-20250407153013-99942baa5d59
 
 // Kubernetes dependencies sharing the same version.
 require (
@@ -74,6 +74,7 @@ require (
 	github.com/coredns/coredns v1.11.3
 	github.com/coreos/go-iptables v0.8.0
 	github.com/cosi-project/runtime v0.10.1
+	github.com/detailyang/go-fallocate v0.0.0-20180908115635-432fa640bd2e
 	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v28.0.4+incompatible
 	github.com/docker/docker v28.0.4+incompatible
@@ -166,7 +167,7 @@ require (
 	github.com/siderolabs/proto-codec v0.1.2
 	github.com/siderolabs/siderolink v0.3.13
 	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.3
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
@@ -198,6 +199,8 @@ require (
 	sigs.k8s.io/hydrophone v0.6.1-0.20240718103601-b92baf7e0b04
 	sigs.k8s.io/yaml v1.4.0
 )
+
+require github.com/diskfs/go-diskfs v1.5.2
 
 require (
 	cel.dev/expr v0.19.2 // indirect
@@ -245,9 +248,11 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/djherbis/times v1.6.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/elliotwutingfeng/asciiset v0.0.0-20230602022725-51bbb787efab // indirect
 	github.com/emicklei/dot v1.8.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.2 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect

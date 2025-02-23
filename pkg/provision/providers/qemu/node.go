@@ -5,15 +5,15 @@
 package qemu
 
 import (
+	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -127,7 +127,7 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		nodeUUID = *nodeReq.UUID
 	}
 
-	apiPort, err := p.findBridgeListenPort(clusterReq)
+	apiBindAddrs, err := p.findAPIBindAddrs(clusterReq)
 	if err != nil {
 		return provision.NodeInfo{}, fmt.Errorf("error finding listen address for the API: %w", err)
 	}
@@ -169,26 +169,19 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 		ExtraISOPath:      extraISOPath,
 		PFlashImages:      pflashImages,
 		MonitorPath:       state.GetRelativePath(fmt.Sprintf("%s.monitor", nodeReq.Name)),
-		EnableKVM:         opts.TargetArch == runtime.GOARCH,
 		BadRTC:            nodeReq.BadRTC,
 		DefaultBootOrder:  defaultBootOrder,
 		BootloaderEnabled: opts.BootloaderEnabled,
 		NodeUUID:          nodeUUID,
 		Config:            nodeConfig,
-		BridgeName:        state.BridgeName,
-		NetworkConfig:     state.VMCNIConfig,
-		CNI:               clusterReq.Network.CNI,
-		CIDRs:             clusterReq.Network.CIDRs,
-		NoMasqueradeCIDRs: clusterReq.Network.NoMasqueradeCIDRs,
-		IPs:               nodeReq.IPs,
-		GatewayAddrs:      clusterReq.Network.GatewayAddrs,
-		MTU:               clusterReq.Network.MTU,
-		Nameservers:       clusterReq.Network.Nameservers,
 		TFTPServer:        nodeReq.TFTPServer,
 		IPXEBootFileName:  nodeReq.IPXEBootFilename,
-		APIPort:           apiPort,
+		APIBindAddress:    apiBindAddrs,
 		WithDebugShell:    opts.WithDebugShell,
 		IOMMUEnabled:      opts.IOMMUEnabled,
+		Network:           getLaunchNetworkConfig(state, clusterReq, nodeReq),
+		// VmMAC is overridden to the interface mac on linux.
+		VmMAC: getRandomMacAddress(),
 	}
 
 	if clusterReq.IPXEBootScript != "" {
@@ -208,7 +201,7 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 
 		IPs: nodeReq.IPs,
 
-		APIPort: apiPort,
+		APIPort: apiBindAddrs.Port,
 	}
 
 	if opts.TPM2Enabled {
@@ -222,7 +215,7 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 	}
 
 	if !clusterReq.Network.DHCPSkipHostname {
-		launchConfig.Hostname = nodeReq.Name
+		launchConfig.Network.Hostname = nodeReq.Name
 	}
 
 	if !nodeReq.PXEBooted && launchConfig.IPXEBootFileName == "" {
@@ -274,7 +267,13 @@ func (p *provisioner) createNode(state *vm.State, clusterReq provision.ClusterRe
 	return nodeInfo, nil
 }
 
-func (p *provisioner) createNodes(state *vm.State, clusterReq provision.ClusterRequest, nodeReqs []provision.NodeRequest, opts *provision.Options) ([]provision.NodeInfo, error) {
+func (p *provisioner) createNodes(
+	ctx context.Context,
+	state *vm.State,
+	clusterReq provision.ClusterRequest,
+	nodeReqs []provision.NodeRequest,
+	opts *provision.Options,
+) ([]provision.NodeInfo, error) {
 	errCh := make(chan error)
 	nodeCh := make(chan provision.NodeInfo, len(nodeReqs))
 
@@ -304,17 +303,6 @@ func (p *provisioner) createNodes(state *vm.State, clusterReq provision.ClusterR
 	}
 
 	return nodesInfo, multiErr.ErrorOrNil()
-}
-
-func (p *provisioner) findBridgeListenPort(clusterReq provision.ClusterRequest) (int, error) {
-	l, err := net.Listen("tcp", net.JoinHostPort(clusterReq.Network.GatewayAddrs[0].String(), "0"))
-	if err != nil {
-		return 0, err
-	}
-
-	port := l.Addr().(*net.TCPAddr).Port
-
-	return port, l.Close()
 }
 
 func (p *provisioner) populateSystemDisk(disks []string, clusterReq provision.ClusterRequest) error {
@@ -359,4 +347,31 @@ func (p *provisioner) createMetalConfigISO(state *vm.State, nodeName, config str
 	}
 
 	return isoPath, nil
+}
+
+func getLaunchNetworkConfigBase(state *vm.State, clusterReq provision.ClusterRequest, nodeReq provision.NodeRequest) networkConfigBase {
+	return networkConfigBase{
+		BridgeName:   state.BridgeName,
+		CIDRs:        clusterReq.Network.CIDRs,
+		IPs:          nodeReq.IPs,
+		GatewayAddrs: clusterReq.Network.GatewayAddrs,
+		MTU:          clusterReq.Network.MTU,
+		Nameservers:  clusterReq.Network.Nameservers,
+	}
+}
+
+// getRandomMacAddress generates a random local MAC address
+// https://stackoverflow.com/a/21027407/10938317
+func getRandomMacAddress() string {
+	const (
+		local     = 0b10
+		multicast = 0b1
+	)
+
+	buf := make([]byte, 6)
+	rand.Read(buf)
+	// clear multicast bit (&^), ensure local bit (|)
+	buf[0] = buf[0]&^multicast | local
+
+	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5])
 }
