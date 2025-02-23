@@ -193,6 +193,33 @@ func getCreateCommand() *cobra.Command {
 		diskEncryptionKeyTypesFlag    = "disk-encryption-key-types"
 	)
 
+	unImplementedQemuFlagsDarwin := []string{
+		tpm2EnabledFlag,
+		withDebugShellFlag,
+		networkNoMasqueradeCIDRsFlag,
+		networkIPv6Flag,
+		nameserversFlag,
+		wireguardCIDRFlag,
+		cniBinPathFlag,
+		cniConfDirFlag,
+		cniCacheDirFlag,
+		cniBundleURLFlag,
+		useVIPFlag,
+		badRTCFlag,
+		dhcpSkipHostnameFlag,
+		networkChaosFlag,
+		jitterFlag,
+		latencyFlag,
+		packetLossFlag,
+		packetReorderFlag,
+		packetCorruptFlag,
+		bandwidthFlag,
+		firewallFlag,
+		withUUIDHostnamesFlag,
+		withSiderolinkAgentFlag,
+		configInjectionMethodFlag,
+	}
+
 	ops := createOps{
 		common: &commonOps{},
 		docker: &dockerOps{},
@@ -334,7 +361,7 @@ func getCreateCommand() *cobra.Command {
 
 	createQemuCmd := &cobra.Command{
 		Use:   providers.QemuProviderName,
-		Short: "Creates a local qemu based kubernetes cluster (linux only)",
+		Short: "Creates a local qemu based kubernetes cluster",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			provisionerFlag := cmd.Flag(cluster.ProvisionerFlag)
@@ -342,7 +369,7 @@ func getCreateCommand() *cobra.Command {
 				return err
 			}
 			ops.common.RootOps.ProvisionerName = providers.QemuProviderName
-			if err := validateProviderFlags(ops, flags); err != nil {
+			if err := validateProviderFlags(ops, flags, unImplementedQemuFlagsDarwin); err != nil {
 				return err
 			}
 
@@ -361,7 +388,7 @@ func getCreateCommand() *cobra.Command {
 			if err := validateCmdProvisioner(provisionerFlag, providers.DockerProviderName); err != nil {
 				return err
 			}
-			if err := validateProviderFlags(ops, flags); err != nil {
+			if err := validateProviderFlags(ops, flags, unImplementedQemuFlagsDarwin); err != nil {
 				return err
 			}
 
@@ -379,7 +406,7 @@ func getCreateCommand() *cobra.Command {
 			if err := providers.IsValidProvider(ops.common.RootOps.ProvisionerName); err != nil {
 				return err
 			}
-			if err := validateProviderFlags(ops, flags); err != nil {
+			if err := validateProviderFlags(ops, flags, unImplementedQemuFlagsDarwin); err != nil {
 				return err
 			}
 
@@ -400,6 +427,9 @@ func getCreateCommand() *cobra.Command {
 	createDockerCmd.Flags().AddFlagSet(flags.docker)
 	createQemuCmd.Flags().AddFlagSet(flags.common)
 	createQemuCmd.Flags().AddFlagSet(flags.qemu)
+
+	hideUnimplementedQemuFlags(createQemuCmd, unImplementedQemuFlagsDarwin)
+	hideUnimplementedQemuFlags(createCmd, unImplementedQemuFlagsDarwin)
 
 	// The individual flagsets are still sorted
 	createCmd.Flags().SortFlags = false
@@ -440,8 +470,22 @@ func getCreateCommand() *cobra.Command {
 	return createCmd
 }
 
+func hideUnimplementedQemuFlags(cmd *cobra.Command, unImplementedQemuFlagsDarwin []string) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if !isDarwin {
+			return
+		}
+
+		for _, unimplemented := range unImplementedQemuFlagsDarwin {
+			if f.Name == unimplemented {
+				f.Hidden = true
+			}
+		}
+	})
+}
+
 // validateProviderFlags checks if flags not applicable for the given provisioner are passed.
-func validateProviderFlags(ops createOps, flags createFlags) error {
+func validateProviderFlags(ops createOps, flags createFlags, unImplementedQemuFlagsDarwin []string) error {
 	var invalidFlags *pflag.FlagSet
 
 	switch ops.common.RootOps.ProvisionerName {
@@ -449,6 +493,24 @@ func validateProviderFlags(ops createOps, flags createFlags) error {
 		invalidFlags = flags.qemu
 	case providers.QemuProviderName:
 		invalidFlags = flags.docker
+
+		if isDarwin {
+			var err error = nil
+
+			flags.qemu.VisitAll(func(f *pflag.Flag) {
+				for _, unimplemented := range unImplementedQemuFlagsDarwin {
+					if f.Changed && f.Name == unimplemented {
+						err = fmt.Errorf("%s flag is not supported on macos", f.Name)
+
+						return
+					}
+				}
+			})
+
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	errMsg := ""

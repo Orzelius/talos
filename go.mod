@@ -74,6 +74,7 @@ require (
 	github.com/coredns/coredns v1.11.3
 	github.com/coreos/go-iptables v0.8.0
 	github.com/cosi-project/runtime v0.10.1
+	github.com/detailyang/go-fallocate v0.0.0-20180908115635-432fa640bd2e
 	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v28.0.2+incompatible
 	github.com/docker/docker v28.0.2+incompatible
