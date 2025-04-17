@@ -118,6 +118,8 @@ func handlerDHCP4(serverIP net.IP, statePath string) server4.Handler {
 			return
 		}
 
+		fmt.Printf("sending res: %s", resp.String())
+
 		_, err = conn.WriteTo(resp.ToBytes(), peer)
 		if err != nil {
 			log.Printf("failure sending response: %s", err)
@@ -270,8 +272,8 @@ const (
 	dhcpLog = "dhcpd.log"
 )
 
-// CreateDHCPd creates DHCPd.
-func (p *Provisioner) CreateDHCPd(state *State, clusterReq provision.ClusterRequest) error {
+// startDHCPd starts the DHCPd server.
+func (p *Provisioner) startDHCPd(state *State, clusterReq provision.ClusterRequest) error {
 	pidPath := state.GetRelativePath(dhcpPid)
 
 	logFile, err := os.OpenFile(state.GetRelativePath(dhcpLog), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o666)

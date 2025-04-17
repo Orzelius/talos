@@ -266,7 +266,7 @@ talosctl cluster create qemu [flags]
       --encrypt-state                            (QEMU only) enable state partition encryption
       --extra-boot-kernel-args string            (QEMU only) add extra kernel args to the initial boot from vmlinuz and initramfs
       --extra-disks int                          (QEMU only) number of extra disks to create for each worker VM
-      --extra-disks-drivers strings              (QEMU only) driver for each extra disk (virtio, ide, ahci, scsi, nvme, megaraid)
+      --extra-disks-drivers strings              (QEMU only) driver for each extra disk (virtio, ide, ahci, scsi, nvme)
       --extra-disks-size int                     (QEMU only) default limit on disk size in MB (each VM) (default 5120)
       --extra-uefi-search-paths strings          (QEMU only) additional search paths for UEFI firmware (only applies when UEFI is enabled)
       --initrd-path string                       (QEMU only) initramfs image to use (default "_out/initramfs-${ARCH}.xz")
@@ -384,7 +384,7 @@ talosctl cluster create [flags]
       --encrypt-state                            (QEMU only) enable state partition encryption
       --extra-boot-kernel-args string            (QEMU only) add extra kernel args to the initial boot from vmlinuz and initramfs
       --extra-disks int                          (QEMU only) number of extra disks to create for each worker VM
-      --extra-disks-drivers strings              (QEMU only) driver for each extra disk (virtio, ide, ahci, scsi, nvme, megaraid)
+      --extra-disks-drivers strings              (QEMU only) driver for each extra disk (virtio, ide, ahci, scsi, nvme)
       --extra-disks-size int                     (QEMU only) default limit on disk size in MB (each VM) (default 5120)
       --extra-uefi-search-paths strings          (QEMU only) additional search paths for UEFI firmware (only applies when UEFI is enabled)
       --initrd-path string                       (QEMU only) initramfs image to use (default "_out/initramfs-${ARCH}.xz")
