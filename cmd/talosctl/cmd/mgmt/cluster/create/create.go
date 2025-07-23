@@ -394,7 +394,7 @@ func create(ctx context.Context, ops createOps) error {
 				BundleURL: qOps.cniBundleURL,
 			},
 			DHCPSkipHostname:  qOps.dhcpSkipHostname,
-			DockerDisableIPv6: dockerOps.dockerDisableIPv6,
+			DockerDisableIPv6: dockerOps.disableIPv6,
 			NetworkChaos:      qOps.networkChaos,
 			Jitter:            qOps.jitter,
 			Latency:           qOps.latency,
@@ -418,7 +418,7 @@ func create(ctx context.Context, ops createOps) error {
 	}
 
 	provisionOptions := []provision.Option{
-		provision.WithDockerPortsHostIP(dockerOps.dockerHostIP),
+		provision.WithDockerPortsHostIP(dockerOps.hostIP),
 		provision.WithBootlader(qOps.bootloaderEnabled),
 		provision.WithUEFI(qOps.uefiEnabled),
 		provision.WithTPM1_2(qOps.tpm1_2Enabled),
@@ -448,20 +448,16 @@ func create(ctx context.Context, ops createOps) error {
 	}
 
 	// should have at least a single primary disk
-	disks := []*provision.Disk{
-		{
-			Size:            uint64(qOps.clusterDiskSize) * 1024 * 1024,
-			SkipPreallocate: !qOps.clusterDiskPreallocate,
-			Driver:          "virtio",
-			BlockSize:       qOps.diskBlockSize,
-		},
+	primaryDisks, workerDisks, err := GetDisks(qOps)
+	if err != nil {
+		return err
 	}
 
 	if cOps.inputDir != "" {
 		configBundleOpts = append(configBundleOpts, bundle.WithExistingConfigs(cOps.inputDir))
 	} else {
 		genOptions := []generate.Option{
-			generate.WithInstallImage(qOps.nodeInstallImage),
+			generate.WithInstallImage(qOps.installerImage),
 			generate.WithDebug(cOps.configDebug),
 			generate.WithDNSDomain(cOps.dnsDomain),
 			generate.WithClusterDiscovery(cOps.enableClusterDiscovery),
@@ -489,35 +485,35 @@ func create(ctx context.Context, ops createOps) error {
 			}))
 		}
 
-		if cOps.talosVersion == "" {
+		if cOps.talosconfigVersion == "" {
 			if rootOps.ProvisionerName == providers.DockerProviderName {
 				parts := strings.Split(dockerOps.nodeImage, ":")
 
-				cOps.talosVersion = parts[len(parts)-1]
+				cOps.talosconfigVersion = parts[len(parts)-1]
 			} else {
-				parts := strings.Split(qOps.nodeInstallImage, ":")
+				parts := strings.Split(qOps.installerImage, ":")
 
-				cOps.talosVersion = parts[len(parts)-1]
+				cOps.talosconfigVersion = parts[len(parts)-1]
 			}
 		}
 
 		var versionContract *config.VersionContract
 
-		if cOps.talosVersion != "latest" {
-			versionContract, err = config.ParseContractFromVersion(cOps.talosVersion)
+		if cOps.talosconfigVersion != "latest" {
+			versionContract, err = config.ParseContractFromVersion(cOps.talosconfigVersion)
 			if err != nil {
-				return fmt.Errorf("error parsing Talos version %q: %w", cOps.talosVersion, err)
+				return fmt.Errorf("error parsing Talos version %q: %w", cOps.talosconfigVersion, err)
 			}
 
 			genOptions = append(genOptions, generate.WithVersionContract(versionContract))
 		}
 
-		extraDisks, userVolumePatches, err := getDisks(provisioner, cidr4, versionContract, &provisionOptions, qOps)
+		extraDisks, userVolumePatches, err := getExtraDisks(provisioner, cidr4, versionContract, &provisionOptions, qOps)
 		if err != nil {
 			return err
 		}
 
-		disks = slices.Concat(disks, extraDisks)
+		primaryDisks = append(primaryDisks, extraDisks...)
 
 		if qOps.encryptStatePartition || qOps.encryptEphemeralPartition {
 			diskEncryptionConfig := &v1alpha1.SystemDiskEncryptionConfig{}
@@ -768,7 +764,7 @@ func create(ctx context.Context, ops createOps) error {
 
 	var configInjectionMethod provision.ConfigInjectionMethod
 
-	switch qOps.configInjectionMethodFlagVal {
+	switch qOps.configInjectionMethod {
 	case "", "default", "http":
 		configInjectionMethod = provision.ConfigInjectionMethodHTTP
 	case "metal-iso":
@@ -796,11 +792,11 @@ func create(ctx context.Context, ops createOps) error {
 		nodeReq := provision.NodeRequest{
 			Name:                  nodeName(rootOps.ClusterName, "controlplane", i+1, nodeUUID, qOps),
 			Type:                  machine.TypeControlPlane,
-			Quirks:                quirks.New(cOps.talosVersion),
+			Quirks:                quirks.New(cOps.talosconfigVersion),
 			IPs:                   nodeIPs,
 			Memory:                controlPlaneMemory,
 			NanoCPUs:              controlPlaneNanoCPUs,
-			Disks:                 disks,
+			Disks:                 primaryDisks,
 			Mounts:                dockerOps.mountOpts.Value(),
 			SkipInjectingConfig:   cOps.skipInjectingConfig,
 			ConfigInjectionMethod: configInjectionMethod,
@@ -826,27 +822,6 @@ func create(ctx context.Context, ops createOps) error {
 		nodeReq.Config = cfg
 
 		request.Nodes = append(request.Nodes, nodeReq)
-	}
-
-	// append extra disks
-	for i := range qOps.extraDisks {
-		driver := "ide"
-
-		// ide driver is not supported on arm64
-		if qOps.targetArch == "arm64" {
-			driver = "virtio"
-		}
-
-		if i < len(qOps.extraDisksDrivers) {
-			driver = qOps.extraDisksDrivers[i]
-		}
-
-		disks = append(disks, &provision.Disk{
-			Size:            uint64(qOps.extraDiskSize) * 1024 * 1024,
-			SkipPreallocate: !qOps.clusterDiskPreallocate,
-			Driver:          driver,
-			BlockSize:       qOps.diskBlockSize,
-		})
 	}
 
 	for i := 1; i <= cOps.workers; i++ {
@@ -876,10 +851,10 @@ func create(ctx context.Context, ops createOps) error {
 				Name:                  nodeName(rootOps.ClusterName, "worker", i, nodeUUID, qOps),
 				Type:                  machine.TypeWorker,
 				IPs:                   nodeIPs,
-				Quirks:                quirks.New(cOps.talosVersion),
+				Quirks:                quirks.New(cOps.talosconfigVersion),
 				Memory:                workerMemory,
 				NanoCPUs:              workerNanoCPUs,
-				Disks:                 disks,
+				Disks:                 append(primaryDisks, workerDisks...),
 				Mounts:                dockerOps.mountOpts.Value(),
 				Config:                cfg,
 				ConfigInjectionMethod: configInjectionMethod,
@@ -918,7 +893,7 @@ func create(ctx context.Context, ops createOps) error {
 	}
 
 	// Create and save the talosctl configuration file.
-	if err = saveConfig(bundleTalosconfig, cOps.talosconfig); err != nil {
+	if err = saveConfig(bundleTalosconfig, cOps.talosconfigDestination); err != nil {
 		return err
 	}
 
@@ -937,6 +912,65 @@ func create(ctx context.Context, ops createOps) error {
 	}
 
 	return clustercmd.ShowCluster(cluster)
+}
+
+type diskRequest struct {
+	Driver string
+	SizeMB int
+}
+
+func parseDisksFlag(disks []string) ([]diskRequest, error) {
+	result := []diskRequest{}
+
+	if len(disks) == 0 {
+		return nil, errors.New("at least one disk has to be specified")
+	}
+
+	for _, d := range disks {
+		parts := strings.SplitN(d, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid disk format: %q", d)
+		}
+
+		size, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid size in disk spec: %q", d)
+		}
+
+		result = append(result, diskRequest{
+			Driver: parts[0],
+			SizeMB: size,
+		})
+	}
+
+	return result, nil
+}
+
+func GetDisks(qOps qemuOps) (primaryDisks, workerExtraDisks []*provision.Disk, err error) {
+	diskRequests, err := parseDisksFlag(qOps.disks)
+	if err != nil {
+		return
+	}
+
+	primaryDisks = []*provision.Disk{
+		{
+			Size:            uint64(diskRequests[0].SizeMB) * 1024 * 1024,
+			SkipPreallocate: !qOps.preallocateDisks,
+			Driver:          diskRequests[0].Driver,
+			BlockSize:       qOps.diskBlockSize,
+		},
+	}
+	// get worker extra disks
+	for _, d := range diskRequests[1:] {
+		workerExtraDisks = append(workerExtraDisks, &provision.Disk{
+			Size:            uint64(d.SizeMB) * 1024 * 1024,
+			SkipPreallocate: !qOps.preallocateDisks,
+			Driver:          d.Driver,
+			BlockSize:       qOps.diskBlockSize,
+		})
+	}
+
+	return primaryDisks, workerExtraDisks, nil
 }
 
 func nodeName(clusterName, role string, index int, uuid uuid.UUID, qOps qemuOps) string {
@@ -1064,7 +1098,7 @@ func parseCPUShare(cpus string) (int64, error) {
 }
 
 //nolint:gocyclo
-func getDisks(
+func getExtraDisks(
 	provisioner provision.Provisioner,
 	cidr4 netip.Prefix,
 	versionContract *config.VersionContract,
@@ -1150,7 +1184,7 @@ func getDisks(
 		disks = append(disks, &provision.Disk{
 			// add 2 MB per partition to make extra room for GPT and alignment
 			Size:            diskSize + GPTAlignment*uint64(len(volumes)/2+1),
-			SkipPreallocate: !qOps.clusterDiskPreallocate,
+			SkipPreallocate: !qOps.preallocateDisks,
 			Driver:          "ide",
 			BlockSize:       qOps.diskBlockSize,
 		})
