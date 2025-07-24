@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	// ProvisionerFlag is the flag with which the provisioner is configured.
-	ProvisionerFlag = "provisioner"
+	// ProvisionerFlagName is name of the flag that specifies the provisioner to use.
+	ProvisionerFlagName = "provisioner"
 )
 
 // Cmd represents the cluster command.
@@ -49,7 +49,7 @@ func init() {
 		DefaultCNIDir = filepath.Join(talosDir, "cni")
 	}
 
-	Cmd.PersistentFlags().StringVar(&Flags.ProvisionerName, "provisioner", providers.DockerProviderName, "Talos cluster provisioner to use")
+	Cmd.PersistentFlags().StringVar(&Flags.ProvisionerName, ProvisionerFlagName, providers.DockerProviderName, "Talos cluster provisioner to use")
 	Cmd.PersistentFlags().StringVar(&Flags.StateDir, "state", DefaultStateDir, "directory path to store cluster state")
 	Cmd.PersistentFlags().StringVar(&Flags.ClusterName, "name", "talos-default", "the name of the cluster")
 }
